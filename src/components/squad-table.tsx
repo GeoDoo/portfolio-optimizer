@@ -1,0 +1,164 @@
+"use client";
+
+import { useStore } from "@/lib/store";
+import { effectiveFe, effectiveBe } from "@/lib/optimizer";
+import { Role } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export function SquadTable() {
+  const {
+    squads,
+    addSquad,
+    updateSquad,
+    removeSquad,
+    addMember,
+    updateMember,
+    removeMember,
+    horizonMonths,
+  } = useStore();
+
+  const handleAddSquad = () => {
+    addSquad({
+      id: crypto.randomUUID(),
+      name: `Squad ${squads.length + 1}`,
+      members: [],
+    });
+  };
+
+  const handleAddMember = (squadId: string, role: Role) => {
+    addMember(squadId, {
+      id: crypto.randomUUID(),
+      role,
+      allocation: 100,
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Squads
+        </h2>
+        <Button size="sm" variant="outline" onClick={handleAddSquad} className="h-7 text-xs">
+          + Add squad
+        </Button>
+      </div>
+
+      {squads.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed rounded-lg">
+          <p className="text-sm text-muted-foreground">No squads yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Add a squad to define capacity
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {squads.map((s) => {
+          const eFe = effectiveFe(s);
+          const eBe = effectiveBe(s);
+          const feCount = s.members.filter((m) => m.role === "fe").length;
+          const beCount = s.members.filter((m) => m.role === "be").length;
+          const totalPmo = (eFe + eBe) * horizonMonths;
+
+          return (
+            <div key={s.id} className="border rounded-lg overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 bg-muted/30">
+                <Input
+                  value={s.name}
+                  onChange={(e) => updateSquad(s.id, { name: e.target.value })}
+                  className="h-7 text-sm font-medium flex-1 border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background transition-colors"
+                />
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {eFe % 1 === 0 ? eFe : eFe.toFixed(1)}FE{" "}
+                    {eBe % 1 === 0 ? eBe : eBe.toFixed(1)}BE
+                  </span>
+                  <span className="text-xs font-semibold tabular-nums">
+                    {totalPmo % 1 === 0 ? totalPmo : totalPmo.toFixed(1)} p-mo
+                  </span>
+                  <button
+                    onClick={() => removeSquad(s.id)}
+                    className="text-muted-foreground/40 hover:text-destructive transition-colors text-sm ml-1"
+                  >
+                    &times;
+                  </button>
+                </div>
+              </div>
+
+              {s.members.length > 0 && (
+                <div className="divide-y">
+                  {s.members.map((m, idx) => (
+                    <div key={m.id} className="flex items-center gap-2 px-3 py-1.5">
+                      <span className="text-xs text-muted-foreground/50 w-4 text-right tabular-nums">
+                        {idx + 1}
+                      </span>
+                      <button
+                        onClick={() =>
+                          updateMember(s.id, m.id, {
+                            role: m.role === "fe" ? "be" : "fe",
+                          })
+                        }
+                        className={`text-xs font-bold px-1.5 py-0.5 rounded transition-colors ${
+                          m.role === "fe"
+                            ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                            : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                        }`}
+                      >
+                        {m.role.toUpperCase()}
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={m.allocation}
+                          onChange={(e) =>
+                            updateMember(s.id, m.id, {
+                              allocation: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
+                            })
+                          }
+                          className="h-6 w-14 text-xs text-center border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background transition-colors"
+                        />
+                        <span className="text-xs text-muted-foreground">%</span>
+                      </div>
+                      <button
+                        onClick={() => removeMember(s.id, m.id)}
+                        className="text-muted-foreground/30 hover:text-destructive transition-colors text-xs ml-auto"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 px-3 py-2 border-t bg-muted/20">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  onClick={() => handleAddMember(s.id, "fe")}
+                >
+                  + FE
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                  onClick={() => handleAddMember(s.id, "be")}
+                >
+                  + BE
+                </Button>
+                <span className="text-xs text-muted-foreground ml-auto tabular-nums">
+                  {feCount}FE {beCount}BE
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
