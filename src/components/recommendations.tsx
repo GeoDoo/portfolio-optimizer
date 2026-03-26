@@ -1,17 +1,28 @@
 "use client";
 
-import { Recommendation, ScheduleDiff } from "@/lib/types";
+import { useState } from "react";
+import { Recommendation, RecommendationAction, ScheduleDiff } from "@/lib/types";
 
 export function RecommendationsPanel({
   recommendations,
   diff,
   projectNames,
+  onApply,
 }: {
   recommendations: Recommendation[];
   diff: ScheduleDiff | null;
   projectNames: Map<string, string>;
+  onApply?: (action: RecommendationAction) => void;
 }) {
+  const [applied, setApplied] = useState<Set<string>>(new Set());
+
   if (recommendations.length === 0 && !diff) return null;
+
+  function handleApply(rec: Recommendation) {
+    if (!rec.action || !onApply) return;
+    onApply(rec.action);
+    setApplied((prev) => new Set(prev).add(rec.id));
+  }
 
   return (
     <div className="space-y-3">
@@ -47,17 +58,35 @@ export function RecommendationsPanel({
           <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300 mb-2">
             Recommendations
           </h3>
-          <div className="space-y-1.5">
-            {recommendations.slice(0, 5).map((r) => (
-              <div key={r.id} className="text-xs leading-relaxed">
-                <span className="font-medium text-amber-800 dark:text-amber-200">
-                  {r.description}
-                </span>
-                <span className="text-amber-600/80 dark:text-amber-400/80 ml-1.5">
-                  &mdash; {r.impact}
-                </span>
-              </div>
-            ))}
+          <div className="space-y-2">
+            {recommendations.slice(0, 5).map((r) => {
+              const wasApplied = applied.has(r.id);
+              return (
+                <div key={r.id} className="flex items-start gap-2">
+                  <div className="flex-1 text-xs leading-relaxed min-w-0">
+                    <span className="font-medium text-amber-800 dark:text-amber-200">
+                      {r.description}
+                    </span>
+                    <span className="text-amber-600/80 dark:text-amber-400/80 ml-1.5">
+                      &mdash; {r.impact}
+                    </span>
+                  </div>
+                  {r.action && onApply && (
+                    <button
+                      onClick={() => handleApply(r)}
+                      disabled={wasApplied}
+                      className={`shrink-0 text-[0.65rem] font-semibold px-2.5 py-1 rounded-md transition-all ${
+                        wasApplied
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 cursor-default"
+                          : "bg-amber-200/60 text-amber-900 hover:bg-amber-300/80 dark:bg-amber-800/40 dark:text-amber-200 dark:hover:bg-amber-700/50 cursor-pointer"
+                      }`}
+                    >
+                      {wasApplied ? "Applied" : "Apply"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

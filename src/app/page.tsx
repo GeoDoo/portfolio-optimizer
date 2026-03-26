@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import { optimize, effectiveFe, effectiveBe } from "@/lib/optimizer";
 import { analyzeProjects, generateRecommendations, computeDiff } from "@/lib/alerts";
 import { SEED_SQUADS, SEED_PROJECTS } from "@/lib/seed";
+import { RecommendationAction } from "@/lib/types";
 import { SquadTable } from "@/components/squad-table";
 import { ProjectTable } from "@/components/project-table";
 import { GanttChart } from "@/components/gantt-chart";
@@ -28,6 +29,7 @@ export default function Home() {
     squads, projects, schedule, prevSchedule,
     horizonMonths, horizonStartMonth, horizonStartYear,
     setSchedule, setHorizonMonths, setHorizonStart, loadData,
+    updateMember, updateProject,
   } = useStore();
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,6 +70,20 @@ export default function Home() {
     () => new Map(projects.map((p) => [p.id, p.name])),
     [projects],
   );
+
+  const applyRecommendation = useCallback((action: RecommendationAction) => {
+    switch (action.type) {
+      case "flip-role":
+        updateMember(action.squadId, action.memberId, { role: action.newRole });
+        break;
+      case "bump-allocation":
+        updateMember(action.squadId, action.memberId, { allocation: action.newAllocation });
+        break;
+      case "reduce-requirement":
+        updateProject(action.projectId, { [action.field]: action.newValue });
+        break;
+    }
+  }, [updateMember, updateProject]);
 
   const totalFeCap = squads.reduce((sum, s) => sum + effectiveFe(s), 0) * horizonMonths;
   const totalBeCap = squads.reduce((sum, s) => sum + effectiveBe(s), 0) * horizonMonths;
@@ -222,6 +238,7 @@ export default function Home() {
         recommendations={recommendations}
         diff={diff}
         projectNames={projectNames}
+        onApply={applyRecommendation}
       />
 
       {/* Gantt chart */}

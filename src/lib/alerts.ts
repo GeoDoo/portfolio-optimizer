@@ -3,6 +3,7 @@ import {
   Squad,
   Alert,
   Recommendation,
+  RecommendationAction,
   ScheduleResult,
   ScheduleDiff,
   ScheduleEntry,
@@ -124,6 +125,12 @@ export function generateRecommendations(
           id: `flip-${member.id}`,
           description: `Convert 1 ${member.role.toUpperCase()} to ${flippedRole.toUpperCase()} on ${squad.name}`,
           impact: `Unlocks ${names.join(", ")}. ${mutatedResult.entries.length} projects scheduled (was ${schedule.entries.length})`,
+          action: {
+            type: "flip-role",
+            squadId: squad.id,
+            memberId: member.id,
+            newRole: flippedRole as "fe" | "be",
+          },
         });
       }
     }
@@ -158,6 +165,13 @@ export function generateRecommendations(
           id: `bump-${member.id}`,
           description: `Increase ${member.role.toUpperCase()} on ${squad.name} from ${member.allocation}% to 100%`,
           impact: `Unlocks ${names.join(", ")}`,
+          action: {
+            type: "bump-allocation",
+            squadId: squad.id,
+            memberId: member.id,
+            squadName: squad.name,
+            newAllocation: 100,
+          },
         });
       }
     }
@@ -181,6 +195,12 @@ export function generateRecommendations(
           id: `reduce-${dp.id}-${field}`,
           description: `Reduce ${dp.name} ${label} requirement from ${dp[field]} to ${dp[field] - 1}`,
           impact: `Project becomes schedulable`,
+          action: {
+            type: "reduce-requirement",
+            projectId: dp.id,
+            field,
+            newValue: dp[field] - 1,
+          },
         });
       }
     }

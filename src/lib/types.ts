@@ -51,10 +51,16 @@ export type Alert = {
   message: string;
 };
 
+export type RecommendationAction =
+  | { type: "flip-role"; squadId: string; memberId: string; newRole: Role }
+  | { type: "bump-allocation"; squadId: string; memberId: string; squadName: string; newAllocation: number }
+  | { type: "reduce-requirement"; projectId: string; field: "feNeeded" | "beNeeded"; newValue: number };
+
 export type Recommendation = {
   id: string;
   description: string;
   impact: string;
+  action?: RecommendationAction;
 };
 
 export type ScheduleDiff = {
