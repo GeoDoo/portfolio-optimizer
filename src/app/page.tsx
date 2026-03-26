@@ -56,7 +56,8 @@ export default function Home() {
     return analyzeProjects(projects, squads, horizonMonths);
   }, [hydrated, projects, squads, horizonMonths]);
 
-  const displaySchedule = schedule ?? prevSchedule;
+  const hasData = squads.length > 0 && projects.length > 0;
+  const displaySchedule = schedule ?? (hasData ? prevSchedule : null);
 
   const recommendations = useMemo(() => {
     if (!displaySchedule || displaySchedule.deferred.length === 0) return [];
@@ -242,9 +243,6 @@ export default function Home() {
               <span>Optimizing&hellip;</span>
             </div>
           )}
-          <Button variant="outline" size="sm" className="ml-auto h-8 text-xs" onClick={runOptimize}>
-            Re-optimize
-          </Button>
         </div>
       )}
 

@@ -8,7 +8,6 @@ const LOAD = "role=button[name='Load sample data']";
 const CLEAR = "role=button[name='Clear all']";
 const ADD_SQUAD = "role=button[name='+ Add squad']";
 const ADD_PROJECT = "role=button[name='+ Add project']";
-const REOPTIMIZE = "role=button[name='Re-optimize']";
 
 async function fresh(page: Page) {
   await page.goto("/");
@@ -20,17 +19,11 @@ async function fresh(page: Page) {
 async function loadSample(page: Page) {
   await fresh(page);
   await page.locator(LOAD).click();
-  await page.waitForTimeout(800);
-  // Ensure optimizer runs — click Re-optimize if visible, otherwise wait for auto
-  const reopt = page.locator(REOPTIMIZE);
-  if (await reopt.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await reopt.click();
-  }
-  await page.waitForTimeout(1500);
+  await waitForSchedule(page);
 }
 
 async function waitForSchedule(page: Page) {
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(2000);
 }
 
 // ---------------------------------------------------------------------------
@@ -248,12 +241,7 @@ test.describe("Scheduling — success", () => {
     await page.locator(ADD_PROJECT).click();
     await page.waitForTimeout(2000);
 
-    // May need to trigger optimize
-    const reopt = page.locator(REOPTIMIZE);
-    if (await reopt.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await reopt.click();
-      await page.waitForTimeout(1500);
-    }
+    await waitForSchedule(page);
 
     await expect(page.locator("text=scheduled").first()).toBeVisible();
   });
@@ -266,14 +254,6 @@ test.describe("Scheduling — success", () => {
     await expect(page.locator("[data-gantt-bar]").first()).toBeVisible();
   });
 
-  test("re-optimize button triggers fresh schedule", async ({ page }) => {
-    await loadSample(page);
-    await page.locator(REOPTIMIZE).click();
-    await waitForSchedule(page);
-
-    await expect(page.locator("[data-gantt-bar]").first()).toBeVisible();
-  });
-
   test("schedule updates when project is modified", async ({ page }) => {
     await loadSample(page);
 
@@ -283,7 +263,6 @@ test.describe("Scheduling — success", () => {
     const firstRow = page.locator("table tbody tr").first();
     await firstRow.hover();
     await firstRow.locator("button:has-text('×')").click();
-    await page.locator(REOPTIMIZE).click();
     await waitForSchedule(page);
 
     const barCountAfter = await page.locator("[data-gantt-bar]").count();
@@ -309,9 +288,6 @@ test.describe("Scheduling — deferrals", () => {
     await feInput.fill("5");
     await page.waitForTimeout(500);
 
-    // Trigger optimize
-    const reopt = page.locator(REOPTIMIZE);
-    if (await reopt.isVisible()) await reopt.click();
     await waitForSchedule(page);
 
     await expect(page.locator("text=deferred").first()).toBeVisible();
@@ -328,10 +304,6 @@ test.describe("Scheduling — deferrals", () => {
     // Set duration to 20 (horizon is 9)
     const durInput = page.locator("table input[type='number']").first();
     await durInput.fill("20");
-    await page.waitForTimeout(500);
-
-    const reopt = page.locator(REOPTIMIZE);
-    if (await reopt.isVisible()) await reopt.click();
     await waitForSchedule(page);
 
     await expect(page.locator("text=deferred").first()).toBeVisible();
@@ -790,7 +762,6 @@ test.describe("Edge cases — UI robustness", () => {
 
     const horizonInput = page.locator("input[type='number']").first();
     await horizonInput.fill("24");
-    await page.locator(REOPTIMIZE).click();
     await waitForSchedule(page);
 
     await expect(page.locator("[data-gantt-bar]").first()).toBeVisible();
@@ -801,7 +772,6 @@ test.describe("Edge cases — UI robustness", () => {
 
     const horizonInput = page.locator("input[type='number']").first();
     await horizonInput.fill("1");
-    await page.locator(REOPTIMIZE).click();
     await waitForSchedule(page);
 
     // Most projects should be deferred with only 1 month horizon

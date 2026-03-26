@@ -98,8 +98,9 @@ export function GanttChart() {
     schedule, prevSchedule, squads, projects,
     horizonMonths, horizonStartMonth, horizonStartYear,
   } = useStore();
-  const displaySchedule = schedule ?? prevSchedule;
-  const isReoptimizing = schedule === null && prevSchedule !== null;
+  const hasData = squads.length > 0 && projects.length > 0;
+  const displaySchedule = schedule ?? (hasData ? prevSchedule : null);
+  const isReoptimizing = schedule === null && displaySchedule !== null;
 
   const [zoom, setZoom] = useState<ZoomLevel>("year");
   const [focusMonth, setFocusMonth] = useState(0);
