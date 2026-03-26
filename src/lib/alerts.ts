@@ -4,6 +4,7 @@ import {
   Alert,
   Recommendation,
   RecommendationAction,
+  OptimalPlan,
   ScheduleResult,
   ScheduleDiff,
   ScheduleEntry,
@@ -272,6 +273,157 @@ export function computeDiff(
   return hasChanges
     ? { added, removed, moved, newlyDeferred, newlyScheduled }
     : null;
+}
+
+// --- Optimal plan: greedy best-combination of changes ---
+
+function applyActionToState(
+  action: RecommendationAction,
+  squads: Squad[],
+  projects: Project[],
+): { squads: Squad[]; projects: Project[] } {
+  switch (action.type) {
+    case "flip-role":
+      return {
+        projects,
+        squads: squads.map((s) =>
+          s.id === action.squadId
+            ? { ...s, members: s.members.map((m) => (m.id === action.memberId ? { ...m, role: action.newRole } : m)) }
+            : s,
+        ),
+      };
+    case "bump-allocation":
+      return {
+        projects,
+        squads: squads.map((s) =>
+          s.id === action.squadId
+            ? { ...s, members: s.members.map((m) => (m.id === action.memberId ? { ...m, allocation: action.newAllocation } : m)) }
+            : s,
+        ),
+      };
+    case "reduce-requirement":
+      return {
+        squads,
+        projects: projects.map((p) => (p.id === action.projectId ? { ...p, [action.field]: action.newValue } : p)),
+      };
+  }
+}
+
+function totalValue(result: ScheduleResult, projects: Project[]): number {
+  const pm = new Map(projects.map((p) => [p.id, p]));
+  return result.entries.reduce((sum, e) => {
+    const p = pm.get(e.projectId);
+    return sum + (p ? p.businessValue + p.timeCriticality + p.riskReduction : 0);
+  }, 0);
+}
+
+export function computeOptimalPlan(
+  projects: Project[],
+  squads: Squad[],
+  schedule: ScheduleResult,
+  horizonMonths: number,
+): OptimalPlan | null {
+  if (schedule.deferred.length === 0) return null;
+
+  let curSquads = squads;
+  let curProjects = projects;
+  let curSchedule = schedule;
+  const actions: RecommendationAction[] = [];
+  const descriptions: string[] = [];
+  const usedActionKeys = new Set<string>();
+
+  for (let iter = 0; iter < 8; iter++) {
+    if (curSchedule.deferred.length === 0) break;
+
+    const candidates = generateCandidates(curProjects, curSquads, curSchedule, horizonMonths);
+    if (candidates.length === 0) break;
+
+    let bestCandidate: { action: RecommendationAction; description: string } | null = null;
+    let bestResult: ScheduleResult | null = null;
+    let bestScore = -1;
+    let bestSquads = curSquads;
+    let bestProjects = curProjects;
+
+    for (const c of candidates) {
+      const key = c.action.type + JSON.stringify(c.action);
+      if (usedActionKeys.has(key)) continue;
+
+      const { squads: ms, projects: mp } = applyActionToState(c.action, curSquads, curProjects);
+      const result = optimize(mp, ms, horizonMonths);
+      const score = result.entries.length * 10000 + totalValue(result, mp);
+
+      if (score > bestScore) {
+        bestCandidate = c;
+        bestResult = result;
+        bestScore = score;
+        bestSquads = ms;
+        bestProjects = mp;
+      }
+    }
+
+    if (!bestCandidate || !bestResult) break;
+    if (bestResult.entries.length < curSchedule.entries.length) break;
+
+    usedActionKeys.add(bestCandidate.action.type + JSON.stringify(bestCandidate.action));
+    actions.push(bestCandidate.action);
+    descriptions.push(bestCandidate.description);
+    curSquads = bestSquads;
+    curProjects = bestProjects;
+    curSchedule = bestResult;
+  }
+
+  if (actions.length === 0) return null;
+  if (curSchedule.entries.length <= schedule.entries.length &&
+      curSchedule.deferred.length >= schedule.deferred.length) return null;
+
+  return {
+    actions,
+    descriptions,
+    scheduledCount: curSchedule.entries.length,
+    deferredCount: curSchedule.deferred.length,
+  };
+}
+
+function generateCandidates(
+  projects: Project[],
+  squads: Squad[],
+  schedule: ScheduleResult,
+  horizonMonths: number,
+): { action: RecommendationAction; description: string }[] {
+  const candidates: { action: RecommendationAction; description: string }[] = [];
+  const deferredProjects = schedule.deferred
+    .map((d) => projects.find((p) => p.id === d.projectId))
+    .filter(Boolean) as Project[];
+
+  for (const squad of squads) {
+    for (const member of squad.members) {
+      const flippedRole = member.role === "be" ? "fe" : "be";
+      candidates.push({
+        action: { type: "flip-role", squadId: squad.id, memberId: member.id, newRole: flippedRole as "fe" | "be" },
+        description: `Convert 1 ${member.role.toUpperCase()} to ${flippedRole.toUpperCase()} on ${squad.name}`,
+      });
+
+      if (member.allocation < 100) {
+        candidates.push({
+          action: { type: "bump-allocation", squadId: squad.id, memberId: member.id, squadName: squad.name, newAllocation: 100 },
+          description: `Increase ${member.role.toUpperCase()} on ${squad.name} from ${member.allocation}% to 100%`,
+        });
+      }
+    }
+  }
+
+  for (const dp of deferredProjects) {
+    for (const field of ["feNeeded", "beNeeded"] as const) {
+      if (dp[field] <= 0) continue;
+      const label = field === "feNeeded" ? "FE" : "BE";
+      candidates.push({
+        action: { type: "reduce-requirement", projectId: dp.id, field, newValue: dp[field] - 1 },
+        description: `Reduce ${dp.name} ${label} requirement from ${dp[field]} to ${dp[field] - 1}`,
+      });
+    }
+  }
+
+  return candidates;
 }
 
 function fmt(n: number): string {

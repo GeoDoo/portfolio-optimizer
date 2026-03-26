@@ -414,11 +414,22 @@ test.describe("Recommendations", () => {
   test("recommendations appear when projects are deferred", async ({ page }) => {
     await loadSample(page);
 
-    await expect(page.getByText("Recommendations", { exact: false }).first()).toBeVisible();
+    // With deferred projects, the optimal plan or individual recommendations should appear
+    await expect(
+      page.getByText("Recommended plan", { exact: false })
+        .or(page.getByText("Recommendations", { exact: false }))
+        .first()
+    ).toBeVisible();
   });
 
   test("recommendations suggest role conversions", async ({ page }) => {
     await loadSample(page);
+
+    // Individual alternatives are collapsed when an optimal plan exists — expand them
+    const showToggle = page.getByText("Show", { exact: false }).filter({ hasText: /^Show \d+$/ });
+    if (await showToggle.isVisible()) {
+      await showToggle.click();
+    }
 
     const recText = page.locator("text=Convert 1").first();
     await expect(recText).toBeVisible();

@@ -71,4 +71,11 @@ export type ScheduleDiff = {
   newlyScheduled: string[];
 };
 
+export type OptimalPlan = {
+  actions: RecommendationAction[];
+  descriptions: string[];
+  scheduledCount: number;
+  deferredCount: number;
+};
+
 export type ZoomLevel = "year" | "month" | "week";

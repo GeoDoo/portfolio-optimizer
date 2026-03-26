@@ -95,9 +95,12 @@ type BarPos = {
 
 export function GanttChart() {
   const {
-    schedule, squads, projects,
+    schedule, prevSchedule, squads, projects,
     horizonMonths, horizonStartMonth, horizonStartYear,
   } = useStore();
+  const displaySchedule = schedule ?? prevSchedule;
+  const isReoptimizing = schedule === null && prevSchedule !== null;
+
   const [zoom, setZoom] = useState<ZoomLevel>("year");
   const [focusMonth, setFocusMonth] = useState(0);
   const [focusWeek, setFocusWeek] = useState(0);
@@ -106,8 +109,8 @@ export function GanttChart() {
   const [measuredGridHeight, setMeasuredGridHeight] = useState(0);
   const gridBodyRef = useRef<HTMLDivElement>(null);
 
-  const scheduleEntries = schedule?.entries ?? [];
-  const scheduleDeferred = schedule?.deferred ?? [];
+  const scheduleEntries = displaySchedule?.entries ?? [];
+  const scheduleDeferred = displaySchedule?.deferred ?? [];
 
   // --- All hooks must be above the early return ---
 
@@ -324,7 +327,7 @@ export function GanttChart() {
   );
 
   // --- Early return after all hooks ---
-  if (!schedule) return null;
+  if (!displaySchedule) return null;
 
   function verdictBadge(): { text: string; cls: string } {
     if (globalUtil >= 90) return { text: "At capacity", cls: "text-red-700 bg-red-50 border-red-200" };
@@ -334,7 +337,7 @@ export function GanttChart() {
   const verdict = verdictBadge();
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 transition-opacity duration-150 ${isReoptimizing ? "opacity-50 pointer-events-none" : ""}`}>
       {/* Header */}
       <div className="flex items-center gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mr-auto">

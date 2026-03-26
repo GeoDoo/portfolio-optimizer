@@ -3,9 +3,9 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { optimize, effectiveFe, effectiveBe } from "@/lib/optimizer";
-import { analyzeProjects, generateRecommendations, computeDiff } from "@/lib/alerts";
+import { analyzeProjects, generateRecommendations, computeDiff, computeOptimalPlan } from "@/lib/alerts";
 import { SEED_SQUADS, SEED_PROJECTS } from "@/lib/seed";
-import { RecommendationAction } from "@/lib/types";
+import { RecommendationAction, OptimalPlan } from "@/lib/types";
 import { SquadTable } from "@/components/squad-table";
 import { ProjectTable } from "@/components/project-table";
 import { GanttChart } from "@/components/gantt-chart";
@@ -29,7 +29,7 @@ export default function Home() {
     squads, projects, schedule, prevSchedule,
     horizonMonths, horizonStartMonth, horizonStartYear,
     setSchedule, setHorizonMonths, setHorizonStart, loadData,
-    updateMember, updateProject,
+    updateMember, updateProject, addProject,
   } = useStore();
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -45,7 +45,7 @@ export default function Home() {
     if (squads.length === 0 || projects.length === 0) return;
 
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(runOptimize, 400);
+    timerRef.current = setTimeout(runOptimize, 120);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
@@ -56,10 +56,17 @@ export default function Home() {
     return analyzeProjects(projects, squads, horizonMonths);
   }, [hydrated, projects, squads, horizonMonths]);
 
+  const displaySchedule = schedule ?? prevSchedule;
+
   const recommendations = useMemo(() => {
-    if (!schedule || schedule.deferred.length === 0) return [];
-    return generateRecommendations(projects, squads, schedule, horizonMonths);
-  }, [schedule, projects, squads, horizonMonths]);
+    if (!displaySchedule || displaySchedule.deferred.length === 0) return [];
+    return generateRecommendations(projects, squads, displaySchedule, horizonMonths);
+  }, [displaySchedule, projects, squads, horizonMonths]);
+
+  const optimalPlan = useMemo(() => {
+    if (!displaySchedule || displaySchedule.deferred.length === 0) return null;
+    return computeOptimalPlan(projects, squads, displaySchedule, horizonMonths);
+  }, [displaySchedule, projects, squads, horizonMonths]);
 
   const diff = useMemo(() => {
     if (!schedule || !prevSchedule) return null;
@@ -213,32 +220,100 @@ export default function Home() {
       </section>
 
       {/* Status bar */}
-      {schedule && (
+      {(displaySchedule || (squads.length > 0 && projects.length > 0)) && (
         <div className="flex items-center gap-3 px-1">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="font-medium text-foreground">{schedule.entries.length}</span> scheduled
-            {schedule.deferred.length > 0 && (
-              <>
-                <span className="mx-1">&middot;</span>
-                <span className="text-destructive font-medium">
-                  {schedule.deferred.length} deferred
-                </span>
-              </>
-            )}
-          </div>
+          {displaySchedule ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className={`w-2 h-2 rounded-full ${schedule ? "bg-emerald-500" : "bg-amber-400 animate-pulse"}`} />
+              <span className="font-medium text-foreground">{displaySchedule.entries.length}</span> scheduled
+              {displaySchedule.deferred.length > 0 && (
+                <>
+                  <span className="mx-1">&middot;</span>
+                  <span className="text-destructive font-medium">
+                    {displaySchedule.deferred.length} deferred
+                  </span>
+                </>
+              )}
+              {!schedule && <span className="text-xs text-muted-foreground/60 ml-1">updating&hellip;</span>}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span>Optimizing&hellip;</span>
+            </div>
+          )}
           <Button variant="outline" size="sm" className="ml-auto h-8 text-xs" onClick={runOptimize}>
             Re-optimize
           </Button>
         </div>
       )}
 
+      {/* Capacity insight */}
+      {displaySchedule && squads.length > 0 && (() => {
+        const scheduledFe = displaySchedule.entries.reduce((s, e) => {
+          const p = projects.find((pr) => pr.id === e.projectId);
+          return s + (p ? p.feNeeded * p.duration : 0);
+        }, 0);
+        const scheduledBe = displaySchedule.entries.reduce((s, e) => {
+          const p = projects.find((pr) => pr.id === e.projectId);
+          return s + (p ? p.beNeeded * p.duration : 0);
+        }, 0);
+        const spareFe = Math.max(0, totalFeCap - scheduledFe);
+        const spareBe = Math.max(0, totalBeCap - scheduledBe);
+        const utilPct = totalCap > 0 ? ((scheduledFe + scheduledBe) / totalCap) * 100 : 0;
+        const hasSpare = spareFe >= 1 || spareBe >= 1;
+        const isOvercommitted = totalDemand > totalCap;
+
+        if (!hasSpare && !isOvercommitted) return null;
+
+        if (hasSpare && displaySchedule.deferred.length === 0) {
+          return (
+            <div className="flex items-center gap-3 p-3 border rounded-lg bg-blue-50/50 border-blue-200/60">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-blue-800">
+                  {fmt(Math.round(utilPct))}% capacity utilized &mdash; you have room for more work
+                </p>
+                <p className="text-xs text-blue-600/80 mt-0.5">
+                  {fmt(spareFe)} FE and {fmt(spareBe)} BE person-months available.
+                  Add projects to maximize delivery.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 h-8 text-xs border-blue-300 text-blue-700 hover:bg-blue-100"
+                onClick={() => {
+                  addProject({
+                    id: crypto.randomUUID(),
+                    name: `Project ${projects.length + 1}`,
+                    duration: 2,
+                    feNeeded: 1,
+                    beNeeded: 1,
+                    businessValue: 5,
+                    timeCriticality: 5,
+                    riskReduction: 3,
+                    squadId: squads[0]?.id || "",
+                    dependencies: [],
+                  });
+                }}
+              >
+                + Add project
+              </Button>
+            </div>
+          );
+        }
+
+        return null;
+      })()}
+
       {/* Recommendations + diff */}
       <RecommendationsPanel
         recommendations={recommendations}
+        optimalPlan={optimalPlan}
         diff={diff}
         projectNames={projectNames}
         onApply={applyRecommendation}
+        onApplyPlan={(plan) => plan.actions.forEach(applyRecommendation)}
       />
 
       {/* Gantt chart */}
