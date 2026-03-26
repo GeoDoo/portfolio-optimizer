@@ -64,18 +64,18 @@ export function SquadTable() {
 
           return (
             <div key={s.id} className="border rounded-lg overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 bg-muted/30">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-muted/30">
                 <Input
                   value={s.name}
                   onChange={(e) => updateSquad(s.id, { name: e.target.value })}
-                  className="h-7 text-sm font-medium flex-1 border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background transition-colors"
+                  className="h-6 text-xs font-medium flex-1 min-w-0 border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background transition-colors px-1.5"
                 />
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-muted-foreground tabular-nums">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[0.65rem] text-muted-foreground tabular-nums whitespace-nowrap">
                     {eFe % 1 === 0 ? eFe : eFe.toFixed(1)}FE{" "}
                     {eBe % 1 === 0 ? eBe : eBe.toFixed(1)}BE
                   </span>
-                  <span className="text-xs font-semibold tabular-nums">
+                  <span className="text-[0.65rem] font-semibold tabular-nums whitespace-nowrap">
                     {totalPmo % 1 === 0 ? totalPmo : totalPmo.toFixed(1)} p-mo
                   </span>
                   <button
@@ -90,8 +90,8 @@ export function SquadTable() {
               {s.members.length > 0 && (
                 <div className="divide-y">
                   {s.members.map((m, idx) => (
-                    <div key={m.id} className="flex items-center gap-2 px-3 py-1.5">
-                      <span className="text-xs text-muted-foreground/50 w-4 text-right tabular-nums">
+                    <div key={m.id} className="flex items-center gap-1.5 px-2.5 py-1">
+                      <span className="text-[0.65rem] text-muted-foreground/50 w-3 text-right tabular-nums">
                         {idx + 1}
                       </span>
                       <button
@@ -100,7 +100,7 @@ export function SquadTable() {
                             role: m.role === "fe" ? "be" : "fe",
                           })
                         }
-                        className={`text-xs font-bold px-1.5 py-0.5 rounded transition-colors ${
+                        className={`text-[0.65rem] font-bold px-1.5 py-0.5 rounded transition-colors ${
                           m.role === "fe"
                             ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
                             : "bg-amber-100 text-amber-700 hover:bg-amber-200"
@@ -108,8 +108,8 @@ export function SquadTable() {
                       >
                         {m.role.toUpperCase()}
                       </button>
-                      <div className="flex items-center gap-1">
-                        <Input
+                      <div className="flex items-center gap-0.5 flex-1 min-w-0">
+                        <input
                           type="number"
                           min={0}
                           max={100}
@@ -119,9 +119,9 @@ export function SquadTable() {
                               allocation: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
                             })
                           }
-                          className="h-6 w-14 text-xs text-center border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background transition-colors"
+                          className="h-5 w-10 text-[0.7rem] text-center rounded border border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background transition-colors tabular-nums outline-none"
                         />
-                        <span className="text-xs text-muted-foreground">%</span>
+                        <span className="text-[0.65rem] text-muted-foreground">%</span>
                       </div>
                       <button
                         onClick={() => removeMember(s.id, m.id)}
@@ -134,11 +134,11 @@ export function SquadTable() {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 px-3 py-2 border-t bg-muted/20">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 border-t bg-muted/20">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 text-xs px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  className="h-5 text-[0.65rem] px-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                   onClick={() => handleAddMember(s.id, "fe")}
                 >
                   + FE
@@ -146,12 +146,12 @@ export function SquadTable() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 text-xs px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                  className="h-5 text-[0.65rem] px-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                   onClick={() => handleAddMember(s.id, "be")}
                 >
                   + BE
                 </Button>
-                <span className="text-xs text-muted-foreground ml-auto tabular-nums">
+                <span className="text-[0.65rem] text-muted-foreground ml-auto tabular-nums">
                   {feCount}FE {beCount}BE
                 </span>
               </div>

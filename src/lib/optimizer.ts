@@ -264,7 +264,11 @@ function greedySchedule(
   return { entries: Array.from(scheduled.values()), deferredIds };
 }
 
-// --- Phase 2: Swap improvement ---
+// --- Phase 2: Multi-swap improvement ---
+
+function projectValue(p: Project): number {
+  return p.businessValue + p.timeCriticality + p.riskReduction;
+}
 
 function swapImprove(
   entries: ScheduleEntry[],
@@ -277,6 +281,7 @@ function swapImprove(
   let currentEntries = [...entries];
   let currentDeferred = new Set(deferredIds);
   let improved = true;
+  const MAX_REMOVE = 3;
 
   while (improved) {
     improved = false;
@@ -284,41 +289,56 @@ function swapImprove(
     for (const defId of currentDeferred) {
       const defProject = projectMap.get(defId);
       if (!defProject) continue;
-      const defValue =
-        defProject.businessValue + defProject.timeCriticality + defProject.riskReduction;
+      const defVal = projectValue(defProject);
 
+      // 1-for-1 swap (fast path)
       for (let i = 0; i < currentEntries.length; i++) {
-        const schedEntry = currentEntries[i];
-        const schedProject = projectMap.get(schedEntry.projectId);
-        if (!schedProject) continue;
-        const schedValue =
-          schedProject.businessValue +
-          schedProject.timeCriticality +
-          schedProject.riskReduction;
+        const victim = currentEntries[i];
+        const schedProject = projectMap.get(victim.projectId);
+        if (!schedProject || defVal <= projectValue(schedProject)) continue;
 
-        if (defValue <= schedValue) continue;
-
-        // Try swapping: remove scheduled, try to fit deferred
         const testEntries = currentEntries.filter((_, j) => j !== i);
         const scheduled = new Map(testEntries.map((e) => [e.projectId, e]));
         const cap = rebuildCapFromEntries(squads, horizonMonths, testEntries, projectMap);
-
-        const slot = tryScheduleOnAnySquad(
-          defProject, squads, cap, scheduled, horizonMonths,
-        );
+        const slot = tryScheduleOnAnySquad(defProject, squads, cap, scheduled, horizonMonths);
         if (!slot) continue;
 
-        // Swap improves total value
-        const newEntry: ScheduleEntry = {
-          projectId: defId,
-          squadId: slot.squadId,
-          startMonth: slot.start,
-          endMonth: slot.start + defProject.duration,
-        };
-
-        currentEntries = [...testEntries, newEntry];
+        currentEntries = [
+          ...testEntries,
+          { projectId: defId, squadId: slot.squadId, startMonth: slot.start, endMonth: slot.start + defProject.duration },
+        ];
         currentDeferred.delete(defId);
-        currentDeferred.add(schedEntry.projectId);
+        currentDeferred.add(victim.projectId);
+        improved = true;
+        break;
+      }
+      if (improved) break;
+
+      // N-for-1 multi-swap: remove up to MAX_REMOVE low-value entries to fit 1 high-value deferred
+      const ranked = currentEntries
+        .map((e, idx) => ({ idx, val: projectValue(projectMap.get(e.projectId)!) }))
+        .filter((r) => r.val < defVal)
+        .sort((a, b) => a.val - b.val);
+
+      for (let n = 2; n <= Math.min(MAX_REMOVE, ranked.length); n++) {
+        const toRemove = ranked.slice(0, n);
+        const removedVal = toRemove.reduce((s, r) => s + r.val, 0);
+        if (defVal <= removedVal) continue;
+
+        const removeSet = new Set(toRemove.map((r) => r.idx));
+        const testEntries = currentEntries.filter((_, j) => !removeSet.has(j));
+        const scheduled = new Map(testEntries.map((e) => [e.projectId, e]));
+        const cap = rebuildCapFromEntries(squads, horizonMonths, testEntries, projectMap);
+        const slot = tryScheduleOnAnySquad(defProject, squads, cap, scheduled, horizonMonths);
+        if (!slot) continue;
+
+        const removedIds = toRemove.map((r) => currentEntries[r.idx].projectId);
+        currentEntries = [
+          ...testEntries,
+          { projectId: defId, squadId: slot.squadId, startMonth: slot.start, endMonth: slot.start + defProject.duration },
+        ];
+        currentDeferred.delete(defId);
+        for (const rid of removedIds) currentDeferred.add(rid);
         improved = true;
         break;
       }
@@ -342,13 +362,13 @@ function gapFill(
   let currentEntries = [...entries];
   let currentDeferred = new Set(deferredIds);
 
-  // Sort deferred: shortest duration first (maximize completions), then by WSJF
+  // Sort deferred by raw value (highest first), then WSJF as tiebreaker
   const sortedDeferred = [...currentDeferred]
     .map((id) => projectMap.get(id)!)
     .filter(Boolean)
     .sort((a, b) => {
-      const durDiff = a.duration - b.duration;
-      if (durDiff !== 0) return durDiff;
+      const valDiff = projectValue(b) - projectValue(a);
+      if (valDiff !== 0) return valDiff;
       return wsjf(b) - wsjf(a);
     });
 
@@ -372,7 +392,58 @@ function gapFill(
   return { entries: currentEntries, deferredIds: currentDeferred };
 }
 
-// --- Phase 4: Compaction ---
+// --- Phase 4: Cross-squad compaction ---
+
+function topoSort(
+  entries: ScheduleEntry[],
+  projectMap: Map<string, Project>,
+  chainPriority: Map<string, number>,
+): ScheduleEntry[] {
+  const entryMap = new Map(entries.map((e) => [e.projectId, e]));
+  const inDegree = new Map<string, number>();
+  const children = new Map<string, string[]>();
+
+  for (const e of entries) {
+    const p = projectMap.get(e.projectId);
+    if (!p) continue;
+    let deg = 0;
+    for (const depId of p.dependencies) {
+      if (entryMap.has(depId)) {
+        deg++;
+        if (!children.has(depId)) children.set(depId, []);
+        children.get(depId)!.push(e.projectId);
+      }
+    }
+    inDegree.set(e.projectId, deg);
+  }
+
+  const tierSort = (ids: string[]) =>
+    ids.sort((a, b) => (chainPriority.get(b) ?? 0) - (chainPriority.get(a) ?? 0));
+
+  const queue: string[] = [];
+  for (const [id, deg] of inDegree) {
+    if (deg === 0) queue.push(id);
+  }
+  tierSort(queue);
+
+  const ordered: ScheduleEntry[] = [];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    const entry = entryMap.get(id);
+    if (entry) ordered.push(entry);
+
+    const next: string[] = [];
+    for (const childId of children.get(id) ?? []) {
+      const deg = (inDegree.get(childId) ?? 1) - 1;
+      inDegree.set(childId, deg);
+      if (deg === 0) next.push(childId);
+    }
+    tierSort(next);
+    queue.push(...next);
+  }
+
+  return ordered;
+}
 
 function compact(
   entries: ScheduleEntry[],
@@ -381,9 +452,11 @@ function compact(
   horizonMonths: number,
 ): ScheduleEntry[] {
   const projectMap = new Map(projects.map((p) => [p.id, p]));
+  const chainPriority = buildChainWsjf(projects);
 
-  // Sort by start time so we process early projects first
-  const sorted = [...entries].sort((a, b) => a.startMonth - b.startMonth);
+  // Topological order ensures deps are compacted before dependents
+  const sorted = topoSort(entries, projectMap, chainPriority);
+
   const result: ScheduleEntry[] = [];
   const scheduled = new Map<string, ScheduleEntry>();
 
@@ -394,14 +467,27 @@ function compact(
       continue;
     }
 
-    // Rebuild cap from already-compacted entries only
     const cap = rebuildCapFromEntries(squads, horizonMonths, result, projectMap);
 
-    const start = findEarliestStart(p, entry.squadId, cap, scheduled, horizonMonths);
+    // Try current squad first
+    let bestStart = findEarliestStart(p, entry.squadId, cap, scheduled, horizonMonths);
+    let bestSquad = entry.squadId;
+
+    // Try all other squads for an earlier start
+    for (const s of squads) {
+      if (s.id === entry.squadId) continue;
+      const start = findEarliestStart(p, s.id, cap, scheduled, horizonMonths);
+      if (start !== -1 && (bestStart === -1 || start < bestStart)) {
+        bestStart = start;
+        bestSquad = s.id;
+      }
+    }
+
     const compacted: ScheduleEntry = {
-      ...entry,
-      startMonth: start !== -1 ? start : entry.startMonth,
-      endMonth: start !== -1 ? start + p.duration : entry.endMonth,
+      projectId: entry.projectId,
+      squadId: bestStart !== -1 ? bestSquad : entry.squadId,
+      startMonth: bestStart !== -1 ? bestStart : entry.startMonth,
+      endMonth: bestStart !== -1 ? bestStart + p.duration : entry.endMonth,
     };
 
     result.push(compacted);

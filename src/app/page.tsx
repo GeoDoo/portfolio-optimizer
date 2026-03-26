@@ -85,7 +85,7 @@ export default function Home() {
   }
 
   return (
-    <main className="max-w-[1440px] mx-auto px-6 py-8 space-y-8">
+    <main className="w-full max-w-[1440px] mx-auto px-6 py-8 space-y-8">
       {/* Header */}
       <header>
         <div className="flex items-center gap-4">
@@ -127,7 +127,7 @@ export default function Home() {
           <select
             value={horizonStartMonth}
             onChange={(e) => setHorizonStart(Number(e.target.value), horizonStartYear)}
-            className="flex h-9 w-36 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-8 w-36 rounded-md border border-input bg-background px-2.5 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {MONTH_NAMES.map((name, i) => (
               <option key={i} value={i}>{name}</option>
@@ -141,7 +141,7 @@ export default function Home() {
           <input
             type="number" min={2024} max={2030} value={horizonStartYear}
             onChange={(e) => setHorizonStart(horizonStartMonth, parseInt(e.target.value) || 2026)}
-            className="flex h-9 w-20 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-8 w-20 rounded-md border border-input bg-background px-2.5 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
         <div className="space-y-1.5">
@@ -151,7 +151,7 @@ export default function Home() {
           <input
             type="number" min={1} max={24} value={horizonMonths}
             onChange={(e) => setHorizonMonths(parseInt(e.target.value) || 6)}
-            className="flex h-9 w-16 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-8 w-16 rounded-md border border-input bg-background px-2.5 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
 
@@ -187,7 +187,11 @@ export default function Home() {
       </section>
 
       {/* Data input: Squads + Projects */}
-      <section className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start">
+      <section className={`grid grid-cols-1 gap-6 items-start ${
+        squads.length > 0 || projects.length > 0
+          ? "lg:grid-cols-[20rem_1fr]"
+          : "lg:grid-cols-2"
+      }`}>
         <SquadTable />
         <ProjectTable alerts={alerts} />
       </section>

@@ -50,9 +50,9 @@ export function ProjectTable({ alerts }: { alerts?: Alert[] }) {
   }
 
   const selectClass =
-    "h-7 w-full rounded border border-input bg-background px-1.5 text-xs transition-colors focus:outline-none focus:ring-1 focus:ring-ring";
+    "h-6 w-full rounded border border-input bg-background px-1.5 text-xs transition-colors focus:outline-none focus:ring-1 focus:ring-ring";
   const inputClass =
-    "h-7 text-center text-sm rounded border border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background focus:outline-none focus:ring-1 focus:ring-ring transition-colors tabular-nums";
+    "h-6 text-center text-xs rounded border border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background focus:outline-none focus:ring-1 focus:ring-ring transition-colors tabular-nums";
 
   return (
     <div className="space-y-3">
@@ -119,7 +119,7 @@ export function ProjectTable({ alerts }: { alerts?: Alert[] }) {
                         <Input
                           value={p.name}
                           onChange={(e) => updateProject(p.id, { name: e.target.value })}
-                          className="h-7 text-sm min-w-[130px] border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background transition-colors"
+                          className="h-6 text-xs min-w-[120px] border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background transition-colors px-1.5"
                         />
                       </td>
 
