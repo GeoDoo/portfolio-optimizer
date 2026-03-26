@@ -2,8 +2,8 @@ services:
   - type: web
     name: portfolio-optimizer
     runtime: node
-    buildCommand: npm install && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public 2>/dev/null; true
-    startCommand: PORT=10000 HOSTNAME=0.0.0.0 node .next/standalone/server.js
+    buildCommand: npm install && npm run build
+    startCommand: npx next start -p $PORT
     envVars:
       - key: NODE_ENV
         value: production
