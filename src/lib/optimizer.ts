@@ -100,12 +100,13 @@ type CapState = {
   be: Map<string, number[]>;
 };
 
-function buildCap(squads: Squad[], months: number): CapState {
+function buildCap(squads: Squad[], months: number, aiEffect: number = 0): CapState {
+  const mul = 1 + aiEffect;
   const fe = new Map<string, number[]>();
   const be = new Map<string, number[]>();
   for (const s of squads) {
-    fe.set(s.id, Array(months).fill(effectiveFe(s)));
-    be.set(s.id, Array(months).fill(effectiveBe(s)));
+    fe.set(s.id, Array(months).fill(effectiveFe(s) * mul));
+    be.set(s.id, Array(months).fill(effectiveBe(s) * mul));
   }
   return { fe, be };
 }
@@ -115,8 +116,9 @@ function rebuildCapFromEntries(
   months: number,
   entries: ScheduleEntry[],
   projectMap: Map<string, Project>,
+  aiEffect: number = 0,
 ): CapState {
-  const cap = buildCap(squads, months);
+  const cap = buildCap(squads, months, aiEffect);
   for (const e of entries) {
     const p = projectMap.get(e.projectId);
     if (!p) continue;
@@ -230,12 +232,13 @@ function greedySchedule(
   squads: Squad[],
   horizonMonths: number,
   objective: Objective,
+  aiEffect: number = 0,
 ): { entries: ScheduleEntry[]; deferredIds: Set<string> } {
   const scheduled = new Map<string, ScheduleEntry>();
   const deferredIds = new Set<string>();
   const remaining = new Set(projects.map((p) => p.id));
   const projectMap = new Map(projects.map((p) => [p.id, p]));
-  const cap = buildCap(squads, horizonMonths);
+  const cap = buildCap(squads, horizonMonths, aiEffect);
   const chainPriority = buildChainPriority(projects, objective);
 
   function getReady(): Project[] {
@@ -303,6 +306,7 @@ function swapImprove(
   projects: Project[],
   squads: Squad[],
   horizonMonths: number,
+  aiEffect: number = 0,
 ): { entries: ScheduleEntry[]; deferredIds: Set<string> } {
   const projectMap = new Map(projects.map((p) => [p.id, p]));
   let currentEntries = [...entries];
@@ -325,7 +329,7 @@ function swapImprove(
 
         const testEntries = currentEntries.filter((_, j) => j !== i);
         const scheduled = new Map(testEntries.map((e) => [e.projectId, e]));
-        const cap = rebuildCapFromEntries(squads, horizonMonths, testEntries, projectMap);
+        const cap = rebuildCapFromEntries(squads, horizonMonths, testEntries, projectMap, aiEffect);
         const slot = tryScheduleOnAnySquad(defProject, squads, cap, scheduled, horizonMonths);
         if (!slot) continue;
 
@@ -353,7 +357,7 @@ function swapImprove(
         const removeSet = new Set(toRemove.map((r) => r.idx));
         const testEntries = currentEntries.filter((_, j) => !removeSet.has(j));
         const scheduled = new Map(testEntries.map((e) => [e.projectId, e]));
-        const cap = rebuildCapFromEntries(squads, horizonMonths, testEntries, projectMap);
+        const cap = rebuildCapFromEntries(squads, horizonMonths, testEntries, projectMap, aiEffect);
         const slot = tryScheduleOnAnySquad(defProject, squads, cap, scheduled, horizonMonths);
         if (!slot) continue;
 
@@ -382,6 +386,7 @@ function gapFill(
   projects: Project[],
   squads: Squad[],
   horizonMonths: number,
+  aiEffect: number = 0,
 ): { entries: ScheduleEntry[]; deferredIds: Set<string> } {
   const projectMap = new Map(projects.map((p) => [p.id, p]));
   let currentEntries = [...entries];
@@ -398,7 +403,7 @@ function gapFill(
 
   for (const p of sortedDeferred) {
     const scheduled = new Map(currentEntries.map((e) => [e.projectId, e]));
-    const cap = rebuildCapFromEntries(squads, horizonMonths, currentEntries, projectMap);
+    const cap = rebuildCapFromEntries(squads, horizonMonths, currentEntries, projectMap, aiEffect);
 
     const slot = tryScheduleOnAnySquad(p, squads, cap, scheduled, horizonMonths);
     if (!slot) continue;
@@ -475,6 +480,7 @@ function compact(
   squads: Squad[],
   horizonMonths: number,
   objective: Objective,
+  aiEffect: number = 0,
 ): ScheduleEntry[] {
   const projectMap = new Map(projects.map((p) => [p.id, p]));
   const chainPriority = buildChainPriority(projects, objective);
@@ -491,7 +497,7 @@ function compact(
       continue;
     }
 
-    const cap = rebuildCapFromEntries(squads, horizonMonths, result, projectMap);
+    const cap = rebuildCapFromEntries(squads, horizonMonths, result, projectMap, aiEffect);
 
     let bestStart = findEarliestStart(p, entry.squadId, cap, scheduled, horizonMonths);
     let bestSquad = entry.squadId;
@@ -547,6 +553,7 @@ export function optimize(
   squads: Squad[],
   horizonMonths: number,
   objective: Objective = "wsjf",
+  aiEffect: number = 0,
 ): ScheduleResult {
   const valid = projects.filter((p) => p.feNeeded + p.beNeeded > 0);
   if (valid.length === 0 || squads.length === 0) {
@@ -554,16 +561,16 @@ export function optimize(
   }
 
   // Phase 1
-  let { entries, deferredIds } = greedySchedule(valid, squads, horizonMonths, objective);
+  let { entries, deferredIds } = greedySchedule(valid, squads, horizonMonths, objective, aiEffect);
 
   // Phase 2
-  ({ entries, deferredIds } = swapImprove(entries, deferredIds, valid, squads, horizonMonths));
+  ({ entries, deferredIds } = swapImprove(entries, deferredIds, valid, squads, horizonMonths, aiEffect));
 
   // Phase 3
-  ({ entries, deferredIds } = gapFill(entries, deferredIds, valid, squads, horizonMonths));
+  ({ entries, deferredIds } = gapFill(entries, deferredIds, valid, squads, horizonMonths, aiEffect));
 
   // Phase 4
-  entries = compact(entries, valid, squads, horizonMonths, objective);
+  entries = compact(entries, valid, squads, horizonMonths, objective, aiEffect);
 
   // Build deferral reasons
   const deferred: DeferralReason[] = [...deferredIds].map((id) => {

@@ -13,6 +13,7 @@ type Store = {
   cycleLengthWeeks: number;
   cycleOverheadPct: number;
   objective: Objective;
+  aiEffect: number;
 
   addSquad: (squad: Squad) => void;
   updateSquad: (id: string, data: Partial<Omit<Squad, "members">>) => void;
@@ -29,6 +30,7 @@ type Store = {
   setCycleLengthWeeks: (n: number) => void;
   setCycleOverheadPct: (n: number) => void;
   setObjective: (o: Objective) => void;
+  setAiEffect: (n: number) => void;
   loadData: (squads: Squad[], projects: Project[]) => void;
 };
 
@@ -49,6 +51,7 @@ export const useStore = create<Store>()(
       cycleLengthWeeks: 1,
       cycleOverheadPct: 12,
       objective: "wsjf" as Objective,
+      aiEffect: 0,
 
       addSquad: (squad) =>
         set((s) => ({ squads: [...s.squads, squad], ...invalidate(s) })),
@@ -119,10 +122,12 @@ export const useStore = create<Store>()(
         set((s) => ({ cycleOverheadPct, ...invalidate(s) })),
       setObjective: (objective) =>
         set((s) => ({ objective, ...invalidate(s) })),
+      setAiEffect: (aiEffect) =>
+        set((s) => ({ aiEffect, ...invalidate(s) })),
     }),
     {
       name: "portfolio-optimizer",
-      version: 7,
+      version: 8,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 3) {
@@ -173,6 +178,11 @@ export const useStore = create<Store>()(
               skill: (m.skill as number) ?? 1,
             })),
           }));
+          state.schedule = null;
+          state.prevSchedule = null;
+        }
+        if (version < 8) {
+          state.aiEffect = state.aiEffect ?? 0;
           state.schedule = null;
           state.prevSchedule = null;
         }

@@ -30,18 +30,18 @@ export default function Home() {
   const {
     squads, projects, schedule, prevSchedule,
     horizonMonths, horizonStartMonth, horizonStartYear,
-    cycleLengthWeeks, cycleOverheadPct, objective,
+    cycleLengthWeeks, cycleOverheadPct, objective, aiEffect,
     setSchedule, setHorizonMonths, setHorizonStart,
-    setCycleLengthWeeks, setCycleOverheadPct, setObjective,
+    setCycleLengthWeeks, setCycleOverheadPct, setObjective, setAiEffect,
     loadData, updateMember, updateProject, addProject,
   } = useStore();
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const runOptimize = useCallback(() => {
     if (squads.length === 0 || projects.length === 0) return;
-    const result = optimize(projects, squads, horizonMonths, objective);
+    const result = optimize(projects, squads, horizonMonths, objective, aiEffect);
     setSchedule(result);
-  }, [projects, squads, horizonMonths, objective, setSchedule]);
+  }, [projects, squads, horizonMonths, objective, aiEffect, setSchedule]);
 
   useEffect(() => {
     if (!hydrated) return;
