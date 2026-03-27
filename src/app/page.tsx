@@ -14,6 +14,7 @@ import { RecommendationsPanel } from "@/components/recommendations";
 import { ComparisonDashboard } from "@/components/comparison-dashboard";
 import { ForecastView } from "@/components/forecast-view";
 import { Button } from "@/components/ui/button";
+import { OnboardingWizard, HelpButton } from "@/components/onboarding";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -121,8 +122,12 @@ export default function Home() {
     );
   }
 
+  const loadSample = useCallback(() => loadData(SEED_SQUADS, SEED_PROJECTS), [loadData]);
+
   return (
     <main className="w-full max-w-[1440px] mx-auto px-6 py-8 space-y-8">
+      <OnboardingWizard onLoadSample={loadSample} />
+
       {/* Header */}
       <header>
         <div className="flex items-center gap-4">
@@ -133,11 +138,12 @@ export default function Home() {
             </p>
           </div>
           <div className="flex items-center gap-2 ml-auto">
+            <HelpButton />
             <Button
               variant="outline"
               size="sm"
               className="h-8 text-xs"
-              onClick={() => loadData(SEED_SQUADS, SEED_PROJECTS)}
+              onClick={loadSample}
             >
               Load sample data
             </Button>
@@ -193,7 +199,7 @@ export default function Home() {
         </div>
         <div className="w-px h-8 bg-border" />
         <div className="space-y-1.5">
-          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground" title="Sprint/iteration length in weeks">
             Cycle (weeks)
           </label>
           <input
@@ -203,7 +209,7 @@ export default function Home() {
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground" title="Percentage of time lost to meetings, planning, ceremonies">
             Overhead %
           </label>
           <input
@@ -215,19 +221,20 @@ export default function Home() {
 
         <div className="w-px h-8 bg-border" />
         <div className="space-y-1.5">
-          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground" title="How to prioritize projects: WSJF (balanced), Value (highest value first), Delay (earliest deadline first), Speed (smallest projects first)">
             Objective
           </label>
           <div className="flex rounded-md border border-input overflow-hidden">
             {([
-              { id: "wsjf" as Objective, label: "WSJF" },
-              { id: "max-value" as Objective, label: "Value" },
-              { id: "min-delay" as Objective, label: "Delay" },
-              { id: "max-throughput" as Objective, label: "Speed" },
+              { id: "wsjf" as Objective, label: "WSJF", tip: "Weighted Shortest Job First — balances value and effort" },
+              { id: "max-value" as Objective, label: "Value", tip: "Schedule highest-value projects first" },
+              { id: "min-delay" as Objective, label: "Delay", tip: "Prioritize projects with earliest deadlines" },
+              { id: "max-throughput" as Objective, label: "Speed", tip: "Deliver the most projects by scheduling smallest first" },
             ]).map((o) => (
               <button
                 key={o.id}
                 onClick={() => setObjective(o.id)}
+                title={o.tip}
                 className={`px-2 py-1 text-[0.65rem] font-medium transition-colors ${
                   objective === o.id
                     ? "bg-foreground text-background"
@@ -242,7 +249,7 @@ export default function Home() {
 
         <div className="w-px h-8 bg-border" />
         <div className="space-y-1.5">
-          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground" title="Model AI impact on engineering capacity: positive = AI boosts throughput, negative = AI disruption reduces capacity">
             AI Effect
           </label>
           <div className="flex items-center gap-2">
@@ -294,8 +301,30 @@ export default function Home() {
         )}
       </section>
 
+      {/* Getting started prompt */}
+      {squads.length === 0 && projects.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-xl bg-muted/10">
+          <div className="text-4xl mb-4">{"🚀"}</div>
+          <h2 className="text-lg font-semibold">Get started in seconds</h2>
+          <p className="text-sm text-muted-foreground mt-1 max-w-md">
+            Load sample data to see the optimizer in action, or create your own squads and projects below.
+          </p>
+          <div className="flex gap-3 mt-5">
+            <Button onClick={loadSample} size="sm" className="h-9 text-sm px-6">
+              Load sample data
+            </Button>
+            <Button variant="outline" size="sm" className="h-9 text-sm px-6" onClick={() => {
+              const el = document.getElementById("squads-section");
+              el?.scrollIntoView({ behavior: "smooth" });
+            }}>
+              Start from scratch
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Data input: Squads + Projects */}
-      <section className={`grid grid-cols-1 gap-6 items-start ${
+      <section id="squads-section" className={`grid grid-cols-1 gap-6 items-start ${
         squads.length > 0 || projects.length > 0
           ? "lg:grid-cols-[20rem_1fr]"
           : "lg:grid-cols-2"
@@ -428,40 +457,47 @@ export default function Home() {
 
       {/* View toggle */}
       {hasData && displaySchedule && (
-        <div className="flex items-center gap-1 border rounded-lg p-1 w-fit">
-          <button
-            onClick={() => setActiveView("schedule")}
-            className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
-              activeView === "schedule"
-                ? "bg-foreground text-background"
-                : "hover:bg-muted text-muted-foreground"
-            }`}
-          >
-            Schedule
-          </button>
-          <button
-            onClick={() => setActiveView("forecast")}
-            className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
-              activeView === "forecast"
-                ? "bg-foreground text-background"
-                : "hover:bg-muted text-muted-foreground"
-            }`}
-          >
-            Forecast
-          </button>
-          <button
-            onClick={() => setActiveView("comparison")}
-            className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
-              activeView === "comparison"
-                ? "bg-violet-600 text-white"
-                : "hover:bg-muted text-muted-foreground"
-            }`}
-          >
-            AI Comparison
-            <span className="ml-1.5 text-[0.6rem] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
-              Experimental
-            </span>
-          </button>
+        <div className="space-y-2">
+          <div className="flex items-center gap-1 border rounded-lg p-1 w-fit">
+            <button
+              onClick={() => setActiveView("schedule")}
+              className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
+                activeView === "schedule"
+                  ? "bg-foreground text-background"
+                  : "hover:bg-muted text-muted-foreground"
+              }`}
+            >
+              Schedule
+            </button>
+            <button
+              onClick={() => setActiveView("forecast")}
+              className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
+                activeView === "forecast"
+                  ? "bg-foreground text-background"
+                  : "hover:bg-muted text-muted-foreground"
+              }`}
+            >
+              Forecast
+            </button>
+            <button
+              onClick={() => setActiveView("comparison")}
+              className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
+                activeView === "comparison"
+                  ? "bg-violet-600 text-white"
+                  : "hover:bg-muted text-muted-foreground"
+              }`}
+            >
+              AI Comparison
+              <span className="ml-1.5 text-[0.6rem] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
+                Experimental
+              </span>
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground pl-1">
+            {activeView === "schedule" && "Gantt chart showing the optimized delivery timeline for each squad."}
+            {activeView === "forecast" && "Monte Carlo simulation \u2014 run hundreds of scenarios to see how likely your plan is to succeed."}
+            {activeView === "comparison" && "Compare your current team setup against AI-augmented alternatives."}
+          </p>
         </div>
       )}
 

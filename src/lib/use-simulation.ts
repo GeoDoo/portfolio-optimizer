@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { SimulationInput } from "./simulator";
+import { useCallback, useRef, useState } from "react";
+import { runSimulation, SimulationInput } from "./simulator";
 import { SimulationResult } from "./types";
 
 type SimState = {
@@ -17,47 +17,34 @@ export function useSimulation() {
     result: null,
   });
 
-  const workerRef = useRef<Worker | null>(null);
-
-  useEffect(() => {
-    return () => {
-      workerRef.current?.terminate();
-      workerRef.current = null;
-    };
-  }, []);
+  const cancelledRef = useRef(false);
 
   const run = useCallback((input: SimulationInput) => {
-    workerRef.current?.terminate();
-
-    const worker = new Worker(
-      new URL("./simulation-worker.ts", import.meta.url),
-    );
-    workerRef.current = worker;
-
+    cancelledRef.current = false;
     setState({ running: true, progress: 0, result: null });
 
-    worker.onmessage = (e) => {
-      if (e.data.type === "progress") {
-        setState((s) => ({ ...s, progress: e.data.pct }));
-      } else if (e.data.type === "result") {
-        setState({ running: false, progress: 100, result: e.data.result });
-        worker.terminate();
-        workerRef.current = null;
+    // Run on main thread via setTimeout to let React paint first
+    setTimeout(() => {
+      if (cancelledRef.current) return;
+      try {
+        const result = runSimulation(input, (pct) => {
+          if (!cancelledRef.current) {
+            setState((s) => ({ ...s, progress: pct }));
+          }
+        });
+        if (!cancelledRef.current) {
+          setState({ running: false, progress: 100, result });
+        }
+      } catch {
+        if (!cancelledRef.current) {
+          setState((s) => ({ ...s, running: false }));
+        }
       }
-    };
-
-    worker.onerror = () => {
-      setState((s) => ({ ...s, running: false }));
-      worker.terminate();
-      workerRef.current = null;
-    };
-
-    worker.postMessage({ type: "run", input });
+    }, 20);
   }, []);
 
   const cancel = useCallback(() => {
-    workerRef.current?.terminate();
-    workerRef.current = null;
+    cancelledRef.current = true;
     setState((s) => ({ ...s, running: false, progress: 0 }));
   }, []);
 

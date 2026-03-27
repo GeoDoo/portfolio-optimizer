@@ -120,10 +120,10 @@ function UncertaintyControls({
   progress: number;
 }) {
   const sliders = [
-    { key: "estimationErrorPct" as const, label: "Estimation error", max: 80 },
-    { key: "reworkProbPct" as const, label: "Rework probability", max: 50 },
-    { key: "dependencyDelayPct" as const, label: "Dependency delay", max: 50 },
-    { key: "interruptionProbPct" as const, label: "Squad interruption", max: 40 },
+    { key: "estimationErrorPct" as const, label: "Estimation error", max: 80, tip: "How much project durations vary from estimates" },
+    { key: "reworkProbPct" as const, label: "Rework probability", max: 50, tip: "Chance a project needs 50% more time due to rework" },
+    { key: "dependencyDelayPct" as const, label: "Dependency delay", max: 50, tip: "Chance each dependency adds a 1-month delay" },
+    { key: "interruptionProbPct" as const, label: "Squad interruption", max: 40, tip: "Chance a squad loses a month to unplanned work" },
   ];
 
   return (
@@ -163,7 +163,7 @@ function UncertaintyControls({
         {sliders.map((s) => (
           <div key={s.key} className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs text-muted-foreground">{s.label}</label>
+              <label className="text-xs text-muted-foreground" title={s.tip}>{s.label}</label>
               <span className="text-xs font-semibold tabular-nums">{params[s.key]}%</span>
             </div>
             <input
@@ -240,8 +240,16 @@ export function ForecastView({
 
       {!result && !running && (
         <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed rounded-lg">
-          <p className="text-sm text-muted-foreground">No simulation results yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Click &quot;Run simulation&quot; to see probabilistic outcomes</p>
+          <p className="text-sm font-medium">Ready to simulate</p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+            Click &quot;Run simulation&quot; above to run {numRunsRef.current} Monte Carlo scenarios. Each scenario adds random estimation errors, rework, and interruptions to stress-test your plan.
+          </p>
+          <button
+            onClick={handleRun}
+            className="mt-4 px-5 py-2 text-xs font-semibold rounded-lg bg-foreground text-background hover:bg-foreground/90 transition-colors"
+          >
+            Run simulation now
+          </button>
         </div>
       )}
     </div>

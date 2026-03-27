@@ -22,6 +22,7 @@ export function RecommendationsPanel({
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [planApplied, setPlanApplied] = useState(false);
   const [showIndividual, setShowIndividual] = useState(false);
+  const [showDiffDetails, setShowDiffDetails] = useState(false);
   const prevIdsRef = useRef<string>("");
 
   const currentIds = recommendations.map((r) => r.id).join(",");
@@ -58,32 +59,50 @@ export function RecommendationsPanel({
 
   return (
     <div className="space-y-3">
-      {diff && (
-        <div className="p-3 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/60 dark:border-blue-800/40 text-sm space-y-1">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300 mb-2">
-            Schedule changes
-          </h3>
-          {diff.newlyScheduled.map((id) => (
-            <div key={id} className="text-xs text-blue-700 dark:text-blue-300">
-              <span className="font-mono text-emerald-600">+</span>{" "}
-              <span className="font-medium">{projectNames.get(id)}</span> now scheduled
+      {diff && (() => {
+        const totalChanges = diff.newlyScheduled.length + diff.moved.length + diff.newlyDeferred.length;
+        return (
+        <div className="p-3 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/60 dark:border-blue-800/40 text-sm">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+              {totalChanges} schedule change{totalChanges !== 1 ? "s" : ""}
+              {diff.newlyScheduled.length > 0 && <span className="text-emerald-600 ml-2">+{diff.newlyScheduled.length} new</span>}
+              {diff.newlyDeferred.length > 0 && <span className="text-red-500 ml-2">{diff.newlyDeferred.length} deferred</span>}
+              {diff.moved.length > 0 && <span className="text-blue-500 ml-2">{diff.moved.length} moved</span>}
+            </h3>
+            <button
+              onClick={() => setShowDiffDetails((p) => !p)}
+              className="text-[0.65rem] font-medium text-blue-600/80 hover:text-blue-700 transition-colors"
+            >
+              {showDiffDetails ? "Hide details" : "Show details"}
+            </button>
+          </div>
+          {showDiffDetails && (
+            <div className="mt-2 space-y-1">
+              {diff.newlyScheduled.map((id) => (
+                <div key={id} className="text-xs text-blue-700 dark:text-blue-300">
+                  <span className="font-mono text-emerald-600">+</span>{" "}
+                  <span className="font-medium">{projectNames.get(id)}</span> now scheduled
+                </div>
+              ))}
+              {diff.moved.map((m) => (
+                <div key={m.projectId} className="text-xs text-blue-700 dark:text-blue-300">
+                  <span className="font-mono text-blue-500">~</span>{" "}
+                  <span className="font-medium">{projectNames.get(m.projectId)}</span>{" "}
+                  moved month {m.fromStart + 1} {"\u2192"} {m.toStart + 1}
+                </div>
+              ))}
+              {diff.newlyDeferred.map((id) => (
+                <div key={id} className="text-xs text-red-600 dark:text-red-400">
+                  <span className="font-mono">{"\u2212"}</span>{" "}
+                  <span className="font-medium">{projectNames.get(id)}</span> deferred
+                </div>
+              ))}
             </div>
-          ))}
-          {diff.moved.map((m) => (
-            <div key={m.projectId} className="text-xs text-blue-700 dark:text-blue-300">
-              <span className="font-mono text-blue-500">~</span>{" "}
-              <span className="font-medium">{projectNames.get(m.projectId)}</span>{" "}
-              moved month {m.fromStart + 1} &rarr; {m.toStart + 1}
-            </div>
-          ))}
-          {diff.newlyDeferred.map((id) => (
-            <div key={id} className="text-xs text-red-600 dark:text-red-400">
-              <span className="font-mono">&minus;</span>{" "}
-              <span className="font-medium">{projectNames.get(id)}</span> deferred
-            </div>
-          ))}
+          )}
         </div>
-      )}
+        );
+      })()}
 
       {/* Optimal plan -- the primary CTA */}
       {optimalPlan && optimalPlan.actions.length > 0 && (
