@@ -114,6 +114,8 @@ export default function Home() {
   const totalBeDemand = projects.reduce((sum, p) => sum + p.duration * p.beNeeded, 0);
   const totalDemand = totalFeDemand + totalBeDemand;
 
+  const loadSample = useCallback(() => loadData(SEED_SQUADS, SEED_PROJECTS), [loadData]);
+
   if (!hydrated) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -121,8 +123,6 @@ export default function Home() {
       </div>
     );
   }
-
-  const loadSample = useCallback(() => loadData(SEED_SQUADS, SEED_PROJECTS), [loadData]);
 
   return (
     <main className="w-full max-w-[1440px] mx-auto px-6 py-8 space-y-8">
