@@ -3,64 +3,62 @@
 import { useMemo, useState } from "react";
 import {
   ComparisonResult,
-  ScenarioLabel,
+  ComparisonMetrics,
   Project,
   ScheduleEntry,
 } from "@/lib/types";
-import { pctChange, formatMultiplier } from "@/lib/ai-comparison";
-
-const SCENARIO_META: { label: ScenarioLabel; title: string; color: string; bg: string }[] = [
-  { label: "conservative", title: "Conservative", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
-  { label: "moderate", title: "Moderate", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
-  { label: "aggressive", title: "Aggressive", color: "text-violet-700", bg: "bg-violet-50 border-violet-200" },
-];
+import { pctChange } from "@/lib/ai-comparison";
 
 const BAR_COLORS = [
   "bg-blue-400", "bg-emerald-400", "bg-amber-400", "bg-violet-400",
   "bg-rose-400", "bg-cyan-400", "bg-orange-400", "bg-teal-400",
 ];
 
-function MetricCard({
-  label,
-  traditional,
-  ai,
-  unit,
-  higherIsBetter = true,
-  format,
-}: {
-  label: string;
-  traditional: number;
-  ai: number;
-  unit?: string;
-  higherIsBetter?: boolean;
-  format?: (n: number) => string;
-}) {
-  const change = pctChange(traditional, ai);
-  const improved = higherIsBetter ? change > 0 : change < 0;
-  const fmt = format ?? ((n: number) => n % 1 === 0 ? String(n) : n.toFixed(1));
+type ScenarioKey = "traditional" | "noOverhead" | "sameTeamAI" | "miniSquad";
 
+const SCENARIO_META: { key: ScenarioKey; title: string; color: string; bg: string; description: string }[] = [
+  {
+    key: "traditional",
+    title: "Traditional",
+    color: "text-slate-700",
+    bg: "bg-slate-50 border-slate-200",
+    description: "FE/BE split + cycle overhead",
+  },
+  {
+    key: "noOverhead",
+    title: "No overhead",
+    color: "text-blue-700",
+    bg: "bg-blue-50 border-blue-200",
+    description: "Same team, 0% ceremony",
+  },
+  {
+    key: "sameTeamAI",
+    title: "Full-stack AI",
+    color: "text-emerald-700",
+    bg: "bg-emerald-50 border-emerald-200",
+    description: "Same headcount, full-stack + 0% overhead",
+  },
+  {
+    key: "miniSquad",
+    title: "Mini squad",
+    color: "text-violet-700",
+    bg: "bg-violet-50 border-violet-200",
+    description: "1 Eng + 1 PM per squad (1x)",
+  },
+];
+
+function fmt(n: number, decimals = 1): string {
+  if (n % 1 === 0) return String(n);
+  return n.toFixed(decimals);
+}
+
+function GainBadge({ value, suffix = "%" }: { value: number; suffix?: string }) {
+  if (Math.abs(value) < 0.5) return null;
+  const positive = value > 0;
   return (
-    <div className="flex flex-col gap-1 p-3 border rounded-lg bg-background min-w-0">
-      <span className="text-[0.65rem] font-medium uppercase tracking-wider text-muted-foreground truncate">
-        {label}
-      </span>
-      <div className="flex items-end gap-2">
-        <div className="flex flex-col">
-          <span className="text-lg font-bold tabular-nums leading-tight">{fmt(ai)}</span>
-          <span className="text-[0.6rem] text-muted-foreground">AI</span>
-        </div>
-        <div className="flex flex-col items-end">
-          <span className="text-sm text-muted-foreground tabular-nums leading-tight">{fmt(traditional)}</span>
-          <span className="text-[0.6rem] text-muted-foreground">Trad.</span>
-        </div>
-      </div>
-      {unit && <span className="text-[0.6rem] text-muted-foreground -mt-0.5">{unit}</span>}
-      {Math.abs(change) > 0.5 && (
-        <span className={`text-xs font-semibold tabular-nums ${improved ? "text-emerald-600" : "text-red-500"}`}>
-          {change > 0 ? "+" : ""}{change.toFixed(0)}%
-        </span>
-      )}
-    </div>
+    <span className={`text-xs font-semibold tabular-nums ${positive ? "text-emerald-600" : "text-red-500"}`}>
+      {positive ? "+" : ""}{fmt(value)}{suffix}
+    </span>
   );
 }
 
@@ -68,14 +66,16 @@ function MiniGantt({
   entries,
   projects,
   horizonMonths,
-  title,
+  label,
   headcount,
+  accentColor,
 }: {
   entries: ScheduleEntry[];
   projects: Project[];
   horizonMonths: number;
-  title: string;
+  label: string;
   headcount: number;
+  accentColor: string;
 }) {
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
   const colorMap = useMemo(() => {
@@ -117,11 +117,16 @@ function MiniGantt({
 
   return (
     <div className="border rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b">
-        <span className="text-xs font-semibold">{title}</span>
+      <div className={`flex items-center gap-2 px-3 py-2 border-b ${accentColor}`}>
+        <span className="text-xs font-semibold">{label}</span>
         <span className="text-[0.65rem] text-muted-foreground ml-auto">{headcount} people</span>
       </div>
       <div className="relative">
+        {squadIds.length === 0 && (
+          <div className="px-3 py-4 text-xs text-muted-foreground text-center">
+            No projects scheduled
+          </div>
+        )}
         {squadIds.map((sid) => {
           const sqLanes = lanes.get(sid) ?? [[]];
           const height = Math.max(1, sqLanes.length) * ROW_H;
@@ -184,134 +189,95 @@ export function ComparisonDashboard({
   cycleLengthWeeks: number;
   cycleOverheadPct: number;
 }) {
-  const [activeScenario, setActiveScenario] = useState<ScenarioLabel>("moderate");
+  const [ganttView, setGanttView] = useState<ScenarioKey>("sameTeamAI");
+
   const trad = comparison.traditional;
-  const ai = comparison.scenarios[activeScenario];
+  const ganttScenario = comparison[ganttView];
 
-  const pitchText = useMemo(() => {
-    const headcountSaved = trad.headcount - ai.headcount;
-    const headcountPctSaved = trad.headcount > 0 ? Math.round((headcountSaved / trad.headcount) * 100) : 0;
-    const extraProjects = ai.scheduledCount - trad.scheduledCount;
-    const valueGain = ai.totalValueDelivered - trad.totalValueDelivered;
-    const fasterBy = trad.lastDeliveryMonth - ai.lastDeliveryMonth;
-
+  const insights = useMemo(() => {
     const lines: string[] = [];
+
+    if (comparison.overheadGainPct > 0.5) {
+      lines.push(
+        `Removing ${cycleOverheadPct}% ceremony overhead alone recovers ${fmt(comparison.overheadGainPct)}% more delivered value.`,
+      );
+    }
+
+    if (comparison.flexibilityGainPct > 0.5) {
+      lines.push(
+        `Switching to full-stack engineers adds another ${fmt(comparison.flexibilityGainPct)}% by eliminating FE/BE bottlenecks.`,
+      );
+    }
+
+    if (comparison.totalGainPct > 0.5) {
+      const extra = comparison.sameTeamAI.scheduledCount - trad.scheduledCount;
+      lines.push(
+        `Combined: the same ${trad.headcount} people deliver ${fmt(comparison.totalGainPct)}% more value` +
+        (extra > 0 ? ` and ${extra} more project${extra > 1 ? "s" : ""}` : "") +
+        ` — with zero additional headcount.`,
+      );
+    } else {
+      lines.push(
+        `Your current setup already captures most of the structural efficiency. Full-stack and overhead elimination yield minimal additional gains with this project mix.`,
+      );
+    }
+
+    const beMult = comparison.breakEvenMultiplier;
+    const miniHc = comparison.miniSquad.headcount;
     lines.push(
-      `With ${comparison.scenarios[activeScenario].headcount} people in AI mini squads (vs ${trad.headcount} traditional), ` +
-      `we reduce headcount by ${headcountPctSaved}%.`,
+      `To match traditional output with mini squads (${miniHc} people vs ${trad.headcount}), each AI engineer needs to be at least ${fmt(beMult)}x as productive.`,
     );
-    if (extraProjects > 0) {
-      lines.push(`We deliver ${extraProjects} more project${extraProjects > 1 ? "s" : ""} within the same horizon.`);
-    } else if (extraProjects === 0) {
-      lines.push(`We deliver the same number of projects (${ai.scheduledCount}).`);
-    }
-    if (valueGain > 0) {
-      lines.push(`Total delivered value increases by ${valueGain} points (+${pctChange(trad.totalValueDelivered, ai.totalValueDelivered).toFixed(0)}%).`);
-    }
-    if (fasterBy > 0) {
-      lines.push(`All work completes ${fasterBy} month${fasterBy > 1 ? "s" : ""} earlier.`);
-    }
-    if (ai.deferredCount < trad.deferredCount) {
-      lines.push(`${trad.deferredCount - ai.deferredCount} fewer project${trad.deferredCount - ai.deferredCount > 1 ? "s" : ""} deferred.`);
-    }
+
     return lines;
-  }, [trad, ai, activeScenario, comparison]);
+  }, [comparison, trad, cycleOverheadPct]);
 
   return (
     <div className="space-y-5">
       {/* Section header */}
       <div className="flex items-center gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Traditional vs AI Comparison
+          AI Advantage Analysis
         </h2>
         <span className="text-[0.65rem] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
-          Experimental
+          Derived from your data
         </span>
       </div>
 
-      {/* Model info */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 border rounded-lg bg-muted/20">
-          <div className="text-xs font-semibold mb-1">Traditional model</div>
-          <div className="text-[0.65rem] text-muted-foreground space-y-0.5">
-            <div>FE + BE + PM roles per squad</div>
-            <div>{cycleLengthWeeks}-week dev cycles &middot; {cycleOverheadPct}% ceremony overhead</div>
-            <div>{trad.headcount} people total</div>
+      {/* Gain breakdown */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="p-4 border rounded-lg bg-blue-50/40 border-blue-200/50">
+          <div className="text-[0.65rem] font-medium uppercase tracking-wider text-blue-600 mb-1">
+            Overhead elimination
+          </div>
+          <div className="text-2xl font-bold text-blue-700 tabular-nums">
+            +{fmt(comparison.overheadGainPct)}%
+          </div>
+          <div className="text-[0.65rem] text-blue-600/70 mt-1">
+            value recovered by removing {cycleOverheadPct}% ceremony
           </div>
         </div>
-        <div className="p-3 border rounded-lg bg-violet-50/50 border-violet-200/60">
-          <div className="text-xs font-semibold mb-1">AI mini squad model</div>
-          <div className="text-[0.65rem] text-muted-foreground space-y-0.5">
-            <div>1 Full-stack Eng + 1 PM + AI per squad</div>
-            <div>Daily cycles &middot; 0% ceremony overhead</div>
-            <div>{ai.headcount} people total &middot; {formatMultiplier(ai.multiplier)} productivity</div>
+        <div className="p-4 border rounded-lg bg-emerald-50/40 border-emerald-200/50">
+          <div className="text-[0.65rem] font-medium uppercase tracking-wider text-emerald-600 mb-1">
+            Full-stack flexibility
+          </div>
+          <div className="text-2xl font-bold text-emerald-700 tabular-nums">
+            +{fmt(comparison.flexibilityGainPct)}%
+          </div>
+          <div className="text-[0.65rem] text-emerald-600/70 mt-1">
+            additional value from eliminating FE/BE bottleneck
           </div>
         </div>
-      </div>
-
-      {/* Scenario tabs */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground mr-1">Scenario:</span>
-        {SCENARIO_META.map((s) => {
-          const scenario = comparison.scenarios[s.label];
-          const active = activeScenario === s.label;
-          return (
-            <button
-              key={s.label}
-              onClick={() => setActiveScenario(s.label)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                active
-                  ? `${s.bg} ${s.color}`
-                  : "bg-background text-muted-foreground hover:bg-muted border-transparent"
-              }`}
-            >
-              {s.title} ({formatMultiplier(scenario.multiplier)})
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        <MetricCard
-          label="Headcount"
-          traditional={trad.headcount}
-          ai={ai.headcount}
-          unit="people"
-          higherIsBetter={false}
-        />
-        <MetricCard
-          label="Projects delivered"
-          traditional={trad.scheduledCount}
-          ai={ai.scheduledCount}
-        />
-        <MetricCard
-          label="Value delivered"
-          traditional={trad.totalValueDelivered}
-          ai={ai.totalValueDelivered}
-          unit="points"
-        />
-        <MetricCard
-          label="Avg lead time"
-          traditional={trad.avgLeadTime}
-          ai={ai.avgLeadTime}
-          unit="months"
-          higherIsBetter={false}
-          format={(n) => n.toFixed(1)}
-        />
-        <MetricCard
-          label="Utilization"
-          traditional={trad.utilizationPct}
-          ai={ai.utilizationPct}
-          unit=""
-          format={(n) => `${Math.round(n)}%`}
-        />
-        <MetricCard
-          label="Deferred"
-          traditional={trad.deferredCount}
-          ai={ai.deferredCount}
-          higherIsBetter={false}
-        />
+        <div className="p-4 border rounded-lg bg-violet-50/40 border-violet-200/50">
+          <div className="text-[0.65rem] font-medium uppercase tracking-wider text-violet-600 mb-1">
+            Break-even multiplier
+          </div>
+          <div className="text-2xl font-bold text-violet-700 tabular-nums">
+            {fmt(comparison.breakEvenMultiplier)}x
+          </div>
+          <div className="text-[0.65rem] text-violet-600/70 mt-1">
+            min AI productivity for mini squad to match traditional
+          </div>
+        </div>
       </div>
 
       {/* Scenario comparison table */}
@@ -320,10 +286,10 @@ export function ComparisonDashboard({
           <thead>
             <tr className="bg-muted/40">
               <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Metric</th>
-              <th className="text-center px-3 py-2 font-semibold text-muted-foreground">Traditional</th>
               {SCENARIO_META.map((s) => (
-                <th key={s.label} className={`text-center px-3 py-2 font-semibold ${s.color}`}>
-                  {s.title} ({formatMultiplier(comparison.scenarios[s.label].multiplier)})
+                <th key={s.key} className={`text-center px-3 py-2 font-semibold ${s.color}`}>
+                  <div>{s.title}</div>
+                  <div className="font-normal text-[0.55rem] text-muted-foreground/60">{s.description}</div>
                 </th>
               ))}
             </tr>
@@ -331,38 +297,31 @@ export function ComparisonDashboard({
           <tbody className="divide-y">
             {([
               { label: "Headcount", key: "headcount" as const, lower: true, unit: "" },
+              { label: "Eng FTE (effective)", key: "engineeringFte" as const, lower: false, unit: "" },
               { label: "Projects delivered", key: "scheduledCount" as const, lower: false, unit: "" },
               { label: "Deferred", key: "deferredCount" as const, lower: true, unit: "" },
               { label: "Value delivered", key: "totalValueDelivered" as const, lower: false, unit: " pts" },
               { label: "Avg lead time", key: "avgLeadTime" as const, lower: true, unit: " mo" },
-              { label: "Utilization", key: "utilizationPct" as const, lower: false, unit: "%" },
             ] as const).map((row) => {
               const tradVal = trad[row.key] as number;
               const fmtVal = (v: number) =>
-                row.key === "avgLeadTime" ? v.toFixed(1) :
-                row.key === "utilizationPct" ? String(Math.round(v)) :
-                String(v);
+                row.key === "avgLeadTime" || row.key === "engineeringFte" ? fmt(v) : String(Math.round(v));
 
               return (
                 <tr key={row.key} className="hover:bg-muted/20">
                   <td className="px-3 py-2 font-medium">{row.label}</td>
-                  <td className="text-center px-3 py-2 tabular-nums">
-                    {fmtVal(tradVal)}{row.unit}
-                  </td>
                   {SCENARIO_META.map((s) => {
-                    const scen = comparison.scenarios[s.label];
-                    const aiVal = scen[row.key] as number;
-                    const change = pctChange(tradVal, aiVal);
+                    const val = comparison[s.key][row.key] as number;
+                    const change = pctChange(tradVal, val);
                     const better = row.lower ? change < 0 : change > 0;
+                    const isTrad = s.key === "traditional";
 
                     return (
-                      <td key={s.label} className="text-center px-3 py-2 tabular-nums">
-                        <span className="font-semibold">
-                          {fmtVal(aiVal)}{row.unit}
-                        </span>
-                        {Math.abs(change) > 0.5 && (
-                          <span className={`ml-1 text-[0.6rem] font-semibold ${better ? "text-emerald-600" : "text-red-500"}`}>
-                            {change > 0 ? "+" : ""}{change.toFixed(0)}%
+                      <td key={s.key} className="text-center px-3 py-2 tabular-nums">
+                        <span className="font-semibold">{fmtVal(val)}{row.unit}</span>
+                        {!isTrad && Math.abs(change) > 0.5 && (
+                          <span className={`ml-1.5 ${better ? "text-emerald-600" : "text-red-500"}`}>
+                            {change > 0 ? "+" : ""}{fmt(change)}%
                           </span>
                         )}
                       </td>
@@ -375,36 +334,51 @@ export function ComparisonDashboard({
         </table>
       </div>
 
-      {/* Side-by-side Gantt */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <MiniGantt
-          entries={trad.entries}
-          projects={projects}
-          horizonMonths={horizonMonths}
-          title="Traditional"
-          headcount={trad.headcount}
-        />
-        <MiniGantt
-          entries={ai.entries}
-          projects={projects}
-          horizonMonths={horizonMonths}
-          title={`AI — ${SCENARIO_META.find((s) => s.label === activeScenario)?.title} (${formatMultiplier(ai.multiplier)})`}
-          headcount={ai.headcount}
-        />
+      {/* Gantt comparison */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs text-muted-foreground">Compare schedules:</span>
+          {SCENARIO_META.filter((s) => s.key !== "traditional").map((s) => (
+            <button
+              key={s.key}
+              onClick={() => setGanttView(s.key)}
+              className={`px-2.5 py-1 rounded-md text-[0.65rem] font-medium border transition-colors ${
+                ganttView === s.key
+                  ? `${s.bg} ${s.color}`
+                  : "bg-background text-muted-foreground hover:bg-muted border-transparent"
+              }`}
+            >
+              {s.title}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <MiniGantt
+            entries={trad.entries}
+            projects={projects}
+            horizonMonths={horizonMonths}
+            label={`Traditional (${trad.headcount} people)`}
+            headcount={trad.headcount}
+            accentColor="bg-slate-50/50"
+          />
+          <MiniGantt
+            entries={ganttScenario.entries}
+            projects={projects}
+            horizonMonths={horizonMonths}
+            label={`${ganttScenario.label} (${ganttScenario.headcount} people)`}
+            headcount={ganttScenario.headcount}
+            accentColor="bg-violet-50/50"
+          />
+        </div>
       </div>
 
-      {/* Pitch summary */}
+      {/* Executive summary */}
       <div className="p-4 border rounded-lg bg-gradient-to-r from-violet-50/60 to-blue-50/60 border-violet-200/40">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-violet-700">
-            Executive summary
-          </span>
-          <span className="text-[0.6rem] text-muted-foreground">
-            ({SCENARIO_META.find((s) => s.label === activeScenario)?.title} scenario)
-          </span>
+        <div className="text-xs font-bold uppercase tracking-wider text-violet-700 mb-2">
+          Key findings
         </div>
-        <div className="space-y-1">
-          {pitchText.map((line, i) => (
+        <div className="space-y-1.5">
+          {insights.map((line, i) => (
             <p key={i} className="text-sm text-foreground/80 leading-relaxed">{line}</p>
           ))}
         </div>

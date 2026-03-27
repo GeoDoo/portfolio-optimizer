@@ -80,10 +80,10 @@ export type OptimalPlan = {
 
 export type ZoomLevel = "year" | "month" | "week";
 
-export type ScenarioLabel = "conservative" | "moderate" | "aggressive";
-
 export type ComparisonMetrics = {
+  label: string;
   headcount: number;
+  engineeringFte: number;
   scheduledCount: number;
   deferredCount: number;
   totalValueDelivered: number;
@@ -96,5 +96,11 @@ export type ComparisonMetrics = {
 
 export type ComparisonResult = {
   traditional: ComparisonMetrics;
-  scenarios: Record<ScenarioLabel, ComparisonMetrics & { multiplier: number }>;
+  noOverhead: ComparisonMetrics;
+  sameTeamAI: ComparisonMetrics;
+  miniSquad: ComparisonMetrics;
+  overheadGainPct: number;
+  flexibilityGainPct: number;
+  totalGainPct: number;
+  breakEvenMultiplier: number;
 };
