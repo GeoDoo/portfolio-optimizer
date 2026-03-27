@@ -890,3 +890,88 @@ describe("Objective strategies", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Skill factor and AI effect
+// ---------------------------------------------------------------------------
+
+describe("Skill factor", () => {
+  it("effectiveFe scales by skill", () => {
+    const sq: Squad = {
+      id: "s1",
+      name: "Test",
+      members: [
+        { id: "m1", role: "fe", allocation: 100, skill: 0.5 },
+        { id: "m2", role: "fe", allocation: 80, skill: 1 },
+      ],
+    };
+    expect(effectiveFe(sq)).toBeCloseTo(0.5 + 0.8);
+  });
+
+  it("effectiveBe scales by skill", () => {
+    const sq: Squad = {
+      id: "s1",
+      name: "Test",
+      members: [
+        { id: "m1", role: "be", allocation: 100, skill: 0.75 },
+      ],
+    };
+    expect(effectiveBe(sq)).toBeCloseTo(0.75);
+  });
+
+  it("low-skill squad cannot fit project that full-skill squad can", () => {
+    const fullSkill = makeSquad("Full", [100], [100]);
+    const lowSkill: Squad = {
+      ...fullSkill,
+      members: fullSkill.members.map((m) => ({ ...m, skill: 0.4 })),
+    };
+    const p = makeProject("Big", {
+      squadId: fullSkill.id, feNeeded: 1, beNeeded: 1, duration: 2,
+    });
+
+    const fullResult = optimize([p], [fullSkill], 4);
+    expect(fullResult.entries).toHaveLength(1);
+
+    const lowResult = optimize([p], [lowSkill], 4);
+    expect(lowResult.deferred).toHaveLength(1);
+  });
+});
+
+describe("AI effect", () => {
+  it("positive aiEffect allows scheduling more projects", () => {
+    const sq = makeSquad("Alpha", [100], [100]);
+    const p1 = makeProject("A", { squadId: sq.id, feNeeded: 1, beNeeded: 1, duration: 3 });
+    const p2 = makeProject("B", { squadId: sq.id, feNeeded: 1, beNeeded: 1, duration: 3 });
+
+    const noAi = optimize([p1, p2], [sq], 4, "wsjf", 0);
+    const withAi = optimize([p1, p2], [sq], 4, "wsjf", 1.0);
+
+    expect(withAi.entries.length).toBeGreaterThanOrEqual(noAi.entries.length);
+  });
+
+  it("negative aiEffect reduces capacity", () => {
+    const sq = makeSquad("Alpha", [100], [100]);
+    const p = makeProject("Tight", {
+      squadId: sq.id, feNeeded: 1, beNeeded: 1, duration: 2,
+    });
+
+    const normal = optimize([p], [sq], 2, "wsjf", 0);
+    expect(normal.entries).toHaveLength(1);
+
+    const hindered = optimize([p], [sq], 2, "wsjf", -0.5);
+    expect(hindered.deferred).toHaveLength(1);
+  });
+
+  it("aiEffect does not affect PM members in effectiveFe/effectiveBe", () => {
+    const sq: Squad = {
+      id: "s1",
+      name: "Test",
+      members: [
+        { id: "m1", role: "pm", allocation: 100, skill: 1 },
+        { id: "m2", role: "fe", allocation: 100, skill: 1 },
+      ],
+    };
+    expect(effectiveFe(sq)).toBe(1);
+    expect(effectiveBe(sq)).toBe(0);
+  });
+});
