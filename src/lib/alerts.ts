@@ -8,6 +8,7 @@ import {
   ScheduleResult,
   ScheduleDiff,
   ScheduleEntry,
+  Objective,
 } from "./types";
 import { effectiveFe, effectiveBe, optimize } from "./optimizer";
 
@@ -90,6 +91,7 @@ export function generateRecommendations(
   squads: Squad[],
   schedule: ScheduleResult,
   horizonMonths: number,
+  objective: Objective = "wsjf",
 ): Recommendation[] {
   if (schedule.deferred.length === 0) return [];
 
@@ -114,7 +116,7 @@ export function generateRecommendations(
           : s,
       );
 
-      const mutatedResult = optimize(projects, mutatedSquads, horizonMonths);
+      const mutatedResult = optimize(projects, mutatedSquads, horizonMonths, objective);
       const unlocked = schedule.deferred.filter(
         (d) => !mutatedResult.deferred.some((md) => md.projectId === d.projectId),
       );
@@ -154,7 +156,7 @@ export function generateRecommendations(
           : s,
       );
 
-      const mutatedResult = optimize(projects, mutatedSquads, horizonMonths);
+      const mutatedResult = optimize(projects, mutatedSquads, horizonMonths, objective);
       const unlocked = schedule.deferred.filter(
         (d) => !mutatedResult.deferred.some((md) => md.projectId === d.projectId),
       );
@@ -188,7 +190,7 @@ export function generateRecommendations(
         p.id === dp.id ? { ...p, [field]: dp[field] - 1 } : p,
       );
 
-      const mutatedResult = optimize(mutatedProjects, squads, horizonMonths);
+      const mutatedResult = optimize(mutatedProjects, squads, horizonMonths, objective);
       const wasDeferred = mutatedResult.deferred.some((d) => d.projectId === dp.id);
 
       if (!wasDeferred) {
@@ -323,6 +325,7 @@ export function computeOptimalPlan(
   squads: Squad[],
   schedule: ScheduleResult,
   horizonMonths: number,
+  objective: Objective = "wsjf",
 ): OptimalPlan | null {
   if (schedule.deferred.length === 0) return null;
 
@@ -336,7 +339,7 @@ export function computeOptimalPlan(
   for (let iter = 0; iter < 8; iter++) {
     if (curSchedule.deferred.length === 0) break;
 
-    const candidates = generateCandidates(curProjects, curSquads, curSchedule, horizonMonths);
+    const candidates = generateCandidates(curProjects, curSquads, curSchedule, horizonMonths, objective);
     if (candidates.length === 0) break;
 
     let bestCandidate: { action: RecommendationAction; description: string } | null = null;
@@ -350,7 +353,7 @@ export function computeOptimalPlan(
       if (usedActionKeys.has(key)) continue;
 
       const { squads: ms, projects: mp } = applyActionToState(c.action, curSquads, curProjects);
-      const result = optimize(mp, ms, horizonMonths);
+      const result = optimize(mp, ms, horizonMonths, objective);
       const score = result.entries.length * 10000 + totalValue(result, mp);
 
       if (score > bestScore) {
@@ -390,6 +393,7 @@ function generateCandidates(
   squads: Squad[],
   schedule: ScheduleResult,
   horizonMonths: number,
+  objective: Objective = "wsjf",
 ): { action: RecommendationAction; description: string }[] {
   const candidates: { action: RecommendationAction; description: string }[] = [];
   const deferredProjects = schedule.deferred

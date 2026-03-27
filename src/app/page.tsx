@@ -65,13 +65,13 @@ export default function Home() {
 
   const recommendations = useMemo(() => {
     if (!displaySchedule || displaySchedule.deferred.length === 0) return [];
-    return generateRecommendations(projects, squads, displaySchedule, horizonMonths);
-  }, [displaySchedule, projects, squads, horizonMonths]);
+    return generateRecommendations(projects, squads, displaySchedule, horizonMonths, objective);
+  }, [displaySchedule, projects, squads, horizonMonths, objective]);
 
   const optimalPlan = useMemo(() => {
     if (!displaySchedule || displaySchedule.deferred.length === 0) return null;
-    return computeOptimalPlan(projects, squads, displaySchedule, horizonMonths);
-  }, [displaySchedule, projects, squads, horizonMonths]);
+    return computeOptimalPlan(projects, squads, displaySchedule, horizonMonths, objective);
+  }, [displaySchedule, projects, squads, horizonMonths, objective]);
 
   const diff = useMemo(() => {
     if (!schedule || !prevSchedule) return null;
@@ -87,8 +87,8 @@ export default function Home() {
 
   const comparison = useMemo<ComparisonResult | null>(() => {
     if (!hasData || !displaySchedule) return null;
-    return runComparison(squads, projects, horizonMonths, cycleOverheadPct);
-  }, [hasData, displaySchedule, squads, projects, horizonMonths, cycleOverheadPct]);
+    return runComparison(squads, projects, horizonMonths, cycleOverheadPct, objective);
+  }, [hasData, displaySchedule, squads, projects, horizonMonths, cycleOverheadPct, objective]);
 
   const applyRecommendation = useCallback((action: RecommendationAction) => {
     switch (action.type) {

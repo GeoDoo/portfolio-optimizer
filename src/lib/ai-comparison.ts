@@ -4,6 +4,7 @@ import {
   ComparisonMetrics,
   ComparisonResult,
   ScheduleResult,
+  Objective,
 } from "./types";
 import { optimize, effectiveFe, effectiveBe } from "./optimizer";
 
@@ -128,6 +129,7 @@ function findBreakEvenMultiplier(
   projects: Project[],
   horizonMonths: number,
   traditionalScore: number,
+  objective: Objective,
 ): number {
   let lo = 0.5;
   let hi = 10;
@@ -135,7 +137,7 @@ function findBreakEvenMultiplier(
   for (let i = 0; i < 25; i++) {
     const mid = (lo + hi) / 2;
     const miniSquads = buildMiniSquads(squads, mid);
-    const result = optimize(projects, miniSquads, horizonMonths);
+    const result = optimize(projects, miniSquads, horizonMonths, objective);
     if (score(result, projects) >= traditionalScore) {
       hi = mid;
     } else {
@@ -151,6 +153,7 @@ export function runComparison(
   projects: Project[],
   horizonMonths: number,
   cycleOverheadPct: number,
+  objective: Objective = "wsjf",
 ): ComparisonResult {
   const tradHeadcount = countHeadcount(squads);
   const tradEngFte = countEngFte(squads);
@@ -158,14 +161,14 @@ export function runComparison(
   // 1. Traditional: current setup with FE/BE role constraints, 0% overhead
   //    (overhead is modeled theoretically, not via the scheduler — integer
   //    requirements can't be reduced by fractional overhead without breaking)
-  const tradSchedule = optimize(projects, squads, horizonMonths);
+  const tradSchedule = optimize(projects, squads, horizonMonths, objective);
   const traditional = collectMetrics(
     "Traditional", tradSchedule, projects, tradHeadcount, tradEngFte, horizonMonths, squads,
   );
 
   // 2. Same team, AI-enabled: same headcount, full-stack + 0% overhead
   const fsSquads = buildFullStackSquads(squads);
-  const fsSchedule = optimize(projects, fsSquads, horizonMonths);
+  const fsSchedule = optimize(projects, fsSquads, horizonMonths, objective);
   const sameTeamAI = collectMetrics(
     "Same team, AI-enabled", fsSchedule, projects,
     tradHeadcount, tradEngFte, horizonMonths, fsSquads,
@@ -175,7 +178,7 @@ export function runComparison(
   const miniSquads = buildMiniSquads(squads, 1);
   const miniHeadcount = squads.length * 2;
   const miniEngFte = squads.length * 1;
-  const miniSchedule = optimize(projects, miniSquads, horizonMonths);
+  const miniSchedule = optimize(projects, miniSquads, horizonMonths, objective);
   const miniSquad = collectMetrics(
     "AI mini squad (1x)", miniSchedule, projects,
     miniHeadcount, miniEngFte, horizonMonths, miniSquads,
@@ -200,7 +203,7 @@ export function runComparison(
 
   // Break-even: what multiplier does a mini squad (1 eng) need to match traditional?
   const breakEvenMultiplier = findBreakEvenMultiplier(
-    squads, projects, horizonMonths, score(tradSchedule, projects),
+    squads, projects, horizonMonths, score(tradSchedule, projects), objective,
   );
 
   // Build a "no overhead" metrics for display (same schedule as traditional,
