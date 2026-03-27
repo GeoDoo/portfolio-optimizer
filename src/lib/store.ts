@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Squad, Member, Project, ScheduleResult, Objective, UncertaintyParams } from "./types";
+import { Squad, Member, Project, ScheduleResult, Objective, UncertaintyParams, Scenario } from "./types";
 
 type Store = {
   squads: Squad[];
@@ -15,6 +15,7 @@ type Store = {
   objective: Objective;
   aiEffect: number;
   uncertainty: UncertaintyParams;
+  scenarios: Scenario[];
 
   addSquad: (squad: Squad) => void;
   updateSquad: (id: string, data: Partial<Omit<Squad, "members">>) => void;
@@ -33,6 +34,11 @@ type Store = {
   setObjective: (o: Objective) => void;
   setAiEffect: (n: number) => void;
   setUncertainty: (params: Partial<UncertaintyParams>) => void;
+  addScenario: (s: Scenario) => void;
+  updateScenario: (id: string, patch: Partial<Scenario>) => void;
+  removeScenario: (id: string) => void;
+  duplicateScenario: (id: string) => void;
+  snapshotAsScenario: (name: string) => void;
   loadData: (squads: Squad[], projects: Project[]) => void;
 };
 
@@ -60,6 +66,7 @@ export const useStore = create<Store>()(
         dependencyDelayPct: 15,
         reworkProbPct: 10,
       },
+      scenarios: [],
 
       addSquad: (squad) =>
         set((s) => ({ squads: [...s.squads, squad], ...invalidate(s) })),
@@ -134,10 +141,45 @@ export const useStore = create<Store>()(
         set((s) => ({ aiEffect, ...invalidate(s) })),
       setUncertainty: (params) =>
         set((s) => ({ uncertainty: { ...s.uncertainty, ...params } })),
+      addScenario: (scenario) =>
+        set((s) => ({ scenarios: [...s.scenarios, scenario] })),
+      updateScenario: (id, patch) =>
+        set((s) => ({
+          scenarios: s.scenarios.map((sc) => (sc.id === id ? { ...sc, ...patch } : sc)),
+        })),
+      removeScenario: (id) =>
+        set((s) => ({ scenarios: s.scenarios.filter((sc) => sc.id !== id) })),
+      duplicateScenario: (id) =>
+        set((s) => {
+          const src = s.scenarios.find((sc) => sc.id === id);
+          if (!src) return s;
+          const clone: Scenario = {
+            ...structuredClone(src),
+            id: crypto.randomUUID(),
+            name: `${src.name} (copy)`,
+          };
+          return { scenarios: [...s.scenarios, clone] };
+        }),
+      snapshotAsScenario: (name) =>
+        set((s) => {
+          const scenario: Scenario = {
+            id: crypto.randomUUID(),
+            name,
+            squads: structuredClone(s.squads),
+            projects: structuredClone(s.projects),
+            objective: s.objective,
+            horizonMonths: s.horizonMonths,
+            uncertainty: { ...s.uncertainty },
+            cycleLengthWeeks: s.cycleLengthWeeks,
+            cycleOverheadPct: s.cycleOverheadPct,
+            aiEffect: s.aiEffect,
+          };
+          return { scenarios: [...s.scenarios, scenario] };
+        }),
     }),
     {
       name: "portfolio-optimizer",
-      version: 9,
+      version: 10,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 3) {
@@ -203,6 +245,9 @@ export const useStore = create<Store>()(
             dependencyDelayPct: 15,
             reworkProbPct: 10,
           };
+        }
+        if (version < 10) {
+          state.scenarios = state.scenarios ?? [];
         }
         return state;
       },
