@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Squad, Member, Project, ScheduleResult, Objective } from "./types";
+import { Squad, Member, Project, ScheduleResult, Objective, UncertaintyParams } from "./types";
 
 type Store = {
   squads: Squad[];
@@ -14,6 +14,7 @@ type Store = {
   cycleOverheadPct: number;
   objective: Objective;
   aiEffect: number;
+  uncertainty: UncertaintyParams;
 
   addSquad: (squad: Squad) => void;
   updateSquad: (id: string, data: Partial<Omit<Squad, "members">>) => void;
@@ -31,6 +32,7 @@ type Store = {
   setCycleOverheadPct: (n: number) => void;
   setObjective: (o: Objective) => void;
   setAiEffect: (n: number) => void;
+  setUncertainty: (params: Partial<UncertaintyParams>) => void;
   loadData: (squads: Squad[], projects: Project[]) => void;
 };
 
@@ -52,6 +54,12 @@ export const useStore = create<Store>()(
       cycleOverheadPct: 12,
       objective: "wsjf" as Objective,
       aiEffect: 0,
+      uncertainty: {
+        estimationErrorPct: 30,
+        interruptionProbPct: 10,
+        dependencyDelayPct: 15,
+        reworkProbPct: 10,
+      },
 
       addSquad: (squad) =>
         set((s) => ({ squads: [...s.squads, squad], ...invalidate(s) })),
@@ -124,10 +132,12 @@ export const useStore = create<Store>()(
         set((s) => ({ objective, ...invalidate(s) })),
       setAiEffect: (aiEffect) =>
         set((s) => ({ aiEffect, ...invalidate(s) })),
+      setUncertainty: (params) =>
+        set((s) => ({ uncertainty: { ...s.uncertainty, ...params } })),
     }),
     {
       name: "portfolio-optimizer",
-      version: 8,
+      version: 9,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 3) {
@@ -185,6 +195,14 @@ export const useStore = create<Store>()(
           state.aiEffect = state.aiEffect ?? 0;
           state.schedule = null;
           state.prevSchedule = null;
+        }
+        if (version < 9) {
+          state.uncertainty = state.uncertainty ?? {
+            estimationErrorPct: 30,
+            interruptionProbPct: 10,
+            dependencyDelayPct: 15,
+            reworkProbPct: 10,
+          };
         }
         return state;
       },
