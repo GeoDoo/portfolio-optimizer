@@ -111,7 +111,7 @@ export function SquadTable() {
                       >
                         {m.role.toUpperCase()}
                       </button>
-                      <div className="flex items-center gap-0.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-0.5">
                         <input
                           type="number"
                           min={0}
@@ -125,6 +125,23 @@ export function SquadTable() {
                           className="h-5 w-10 text-[0.7rem] text-center rounded border border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background transition-colors tabular-nums outline-none"
                         />
                         <span className="text-[0.65rem] text-muted-foreground">%</span>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <input
+                          type="number"
+                          min={0}
+                          max={1}
+                          step={0.1}
+                          value={m.skill}
+                          onChange={(e) =>
+                            updateMember(s.id, m.id, {
+                              skill: Math.min(1, Math.max(0, parseFloat(e.target.value) || 0)),
+                            })
+                          }
+                          title="Skill / seniority factor (0–1)"
+                          className="h-5 w-10 text-[0.7rem] text-center rounded border border-transparent bg-transparent hover:border-input focus:border-input focus:bg-background transition-colors tabular-nums outline-none"
+                        />
+                        <span className="text-[0.65rem] text-muted-foreground">sk</span>
                       </div>
                       <button
                         onClick={() => removeMember(s.id, m.id)}
