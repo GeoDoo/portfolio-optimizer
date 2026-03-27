@@ -530,7 +530,7 @@ export function GanttChart() {
                           {rank}
                         </span>
                         <span className="truncate leading-tight">{proj.name}</span>
-                        {reassigned && <span className="shrink-0 opacity-70 text-[0.65rem]">&nearr;</span>}
+                        {reassigned && <span className="shrink-0 opacity-70 text-[0.65rem]">{"\u2197"}</span>}
                         {missedDeadline && <span className="shrink-0 text-red-200 text-[0.65rem] font-bold">!</span>}
                       </div>
                     );
