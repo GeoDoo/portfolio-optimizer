@@ -4,6 +4,7 @@ import {
   ScheduleEntry,
   ScheduleResult,
   DeferralReason,
+  Objective,
 } from "./types";
 
 // --- Scoring ---
@@ -12,10 +13,13 @@ function jobSize(p: Project): number {
   return p.duration * (p.feNeeded + p.beNeeded);
 }
 
+function projectValue(p: Project): number {
+  return p.businessValue + p.timeCriticality + p.riskReduction;
+}
+
 function wsjf(p: Project): number {
-  const cost = p.businessValue + p.timeCriticality + p.riskReduction;
   const size = jobSize(p);
-  return size > 0 ? cost / size : 0;
+  return size > 0 ? projectValue(p) / size : 0;
 }
 
 export function getWsjf(p: Project): number {
@@ -23,13 +27,28 @@ export function getWsjf(p: Project): number {
 }
 
 /**
- * For scheduling, a predecessor's effective priority should reflect the value
- * it unblocks. chainWsjf(B) = max(wsjf(B), wsjf(A)) for every A that
- * transitively depends on B. This ensures blockers of high-value work are
- * scheduled early.
+ * Per-project priority score for a given objective. Higher = scheduled first.
  */
-function buildChainWsjf(projects: Project[]): Map<string, number> {
-  const own = new Map(projects.map((p) => [p.id, wsjf(p)]));
+function ownPriority(p: Project, objective: Objective): number {
+  switch (objective) {
+    case "wsjf":
+      return wsjf(p);
+    case "max-value":
+      return projectValue(p);
+    case "min-delay":
+      return -(p.deadline ?? Infinity);
+    case "max-throughput":
+      return -(jobSize(p) || Infinity);
+  }
+}
+
+/**
+ * Chain-aware priority: a predecessor inherits the best priority from
+ * anything it transitively blocks, ensuring blockers of important work
+ * are scheduled early regardless of their own score.
+ */
+function buildChainPriority(projects: Project[], objective: Objective): Map<string, number> {
+  const own = new Map(projects.map((p) => [p.id, ownPriority(p, objective)]));
   const dependents = new Map<string, Set<string>>();
   for (const p of projects) {
     for (const depId of p.dependencies) {
@@ -190,17 +209,34 @@ function totalValue(entries: ScheduleEntry[], projectMap: Map<string, Project>):
 
 // --- Phase 1: Greedy baseline ---
 
+function tiebreaker(a: Project, b: Project, objective: Objective): number {
+  switch (objective) {
+    case "wsjf": {
+      const da = a.deadline ?? Infinity;
+      const db = b.deadline ?? Infinity;
+      return da - db;
+    }
+    case "max-value":
+      return a.duration - b.duration;
+    case "min-delay":
+      return a.duration - b.duration;
+    case "max-throughput":
+      return projectValue(b) - projectValue(a);
+  }
+}
+
 function greedySchedule(
   projects: Project[],
   squads: Squad[],
   horizonMonths: number,
+  objective: Objective,
 ): { entries: ScheduleEntry[]; deferredIds: Set<string> } {
   const scheduled = new Map<string, ScheduleEntry>();
   const deferredIds = new Set<string>();
   const remaining = new Set(projects.map((p) => p.id));
   const projectMap = new Map(projects.map((p) => [p.id, p]));
   const cap = buildCap(squads, horizonMonths);
-  const chainPriority = buildChainWsjf(projects);
+  const chainPriority = buildChainPriority(projects, objective);
 
   function getReady(): Project[] {
     const ready: Project[] = [];
@@ -211,13 +247,11 @@ function greedySchedule(
       }
     }
     return ready.sort((a, b) => {
-      const ca = chainPriority.get(a.id) ?? wsjf(a);
-      const cb = chainPriority.get(b.id) ?? wsjf(b);
+      const ca = chainPriority.get(a.id) ?? ownPriority(a, objective);
+      const cb = chainPriority.get(b.id) ?? ownPriority(b, objective);
       const diff = cb - ca;
       if (Math.abs(diff) > 0.001) return diff;
-      const da = a.deadline ?? Infinity;
-      const db = b.deadline ?? Infinity;
-      return da - db;
+      return tiebreaker(a, b, objective);
     });
   }
 
@@ -262,10 +296,6 @@ function greedySchedule(
 }
 
 // --- Phase 2: Multi-swap improvement ---
-
-function projectValue(p: Project): number {
-  return p.businessValue + p.timeCriticality + p.riskReduction;
-}
 
 function swapImprove(
   entries: ScheduleEntry[],
@@ -444,9 +474,10 @@ function compact(
   projects: Project[],
   squads: Squad[],
   horizonMonths: number,
+  objective: Objective,
 ): ScheduleEntry[] {
   const projectMap = new Map(projects.map((p) => [p.id, p]));
-  const chainPriority = buildChainWsjf(projects);
+  const chainPriority = buildChainPriority(projects, objective);
 
   const sorted = topoSort(entries, projectMap, chainPriority);
 
@@ -515,6 +546,7 @@ export function optimize(
   projects: Project[],
   squads: Squad[],
   horizonMonths: number,
+  objective: Objective = "wsjf",
 ): ScheduleResult {
   const valid = projects.filter((p) => p.feNeeded + p.beNeeded > 0);
   if (valid.length === 0 || squads.length === 0) {
@@ -522,7 +554,7 @@ export function optimize(
   }
 
   // Phase 1
-  let { entries, deferredIds } = greedySchedule(valid, squads, horizonMonths);
+  let { entries, deferredIds } = greedySchedule(valid, squads, horizonMonths, objective);
 
   // Phase 2
   ({ entries, deferredIds } = swapImprove(entries, deferredIds, valid, squads, horizonMonths));
@@ -531,7 +563,7 @@ export function optimize(
   ({ entries, deferredIds } = gapFill(entries, deferredIds, valid, squads, horizonMonths));
 
   // Phase 4
-  entries = compact(entries, valid, squads, horizonMonths);
+  entries = compact(entries, valid, squads, horizonMonths, objective);
 
   // Build deferral reasons
   const deferred: DeferralReason[] = [...deferredIds].map((id) => {
