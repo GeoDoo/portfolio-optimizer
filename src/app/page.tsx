@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { optimize, effectiveFe, effectiveBe } from "@/lib/optimizer";
@@ -145,6 +146,12 @@ export default function Home() {
           </p>
         </div>
         <div className="flex items-center gap-2 ml-auto">
+          <Link
+            href="/learn"
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+          >
+            Learn
+          </Link>
           <HelpButton />
           <Button variant="outline" size="sm" className="h-8 text-xs" onClick={loadSample}>
             Load sample data
