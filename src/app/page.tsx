@@ -12,6 +12,7 @@ import { ProjectTable } from "@/components/project-table";
 import { GanttChart } from "@/components/gantt-chart";
 import { RecommendationsPanel } from "@/components/recommendations";
 import { ComparisonDashboard } from "@/components/comparison-dashboard";
+import { ForecastView } from "@/components/forecast-view";
 import { Button } from "@/components/ui/button";
 
 const MONTH_NAMES = [
@@ -83,7 +84,7 @@ export default function Home() {
     [projects],
   );
 
-  const [activeView, setActiveView] = useState<"schedule" | "comparison">("schedule");
+  const [activeView, setActiveView] = useState<"schedule" | "forecast" | "comparison">("schedule");
 
   const comparison = useMemo<ComparisonResult | null>(() => {
     if (!hasData || !displaySchedule) return null;
@@ -438,6 +439,16 @@ export default function Home() {
             Schedule
           </button>
           <button
+            onClick={() => setActiveView("forecast")}
+            className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
+              activeView === "forecast"
+                ? "bg-foreground text-background"
+                : "hover:bg-muted text-muted-foreground"
+            }`}
+          >
+            Forecast
+          </button>
+          <button
             onClick={() => setActiveView("comparison")}
             className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
               activeView === "comparison"
@@ -456,6 +467,11 @@ export default function Home() {
       {/* Schedule view */}
       {activeView === "schedule" && (
         <GanttChart />
+      )}
+
+      {/* Forecast view */}
+      {activeView === "forecast" && displaySchedule && (
+        <ForecastView deterministicScheduledCount={displaySchedule.entries.length} />
       )}
 
       {/* AI Comparison view */}
