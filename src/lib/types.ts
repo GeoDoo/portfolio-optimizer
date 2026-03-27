@@ -83,6 +83,40 @@ export type OptimalPlan = {
 
 export type ZoomLevel = "year" | "month" | "week";
 
+// --- Simulation ---
+
+export type UncertaintyParams = {
+  estimationErrorPct: number;
+  interruptionProbPct: number;
+  dependencyDelayPct: number;
+  reworkProbPct: number;
+};
+
+export type ProjectStats = {
+  projectId: string;
+  completionPct: number;
+  deliveryP10: number;
+  deliveryP50: number;
+  deliveryP90: number;
+};
+
+export type SimulationResult = {
+  numRuns: number;
+  projectStats: ProjectStats[];
+  totalValueP10: number;
+  totalValueP50: number;
+  totalValueP90: number;
+  scheduledCountP10: number;
+  scheduledCountP50: number;
+  scheduledCountP90: number;
+  lastMonthP10: number;
+  lastMonthP50: number;
+  lastMonthP90: number;
+  planReliability: number;
+};
+
+// --- Comparison ---
+
 export type ComparisonMetrics = {
   label: string;
   headcount: number;
