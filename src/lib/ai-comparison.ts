@@ -16,7 +16,7 @@ import { optimize, effectiveFe, effectiveBe } from "./optimizer";
 function buildFullStackSquads(squads: Squad[]): Squad[] {
   return squads.map((s) => {
     const pms = s.members.filter((m) => m.role === "pm");
-    const engineers = s.members.filter((m) => m.role !== "pm");
+    const engineers = s.members.filter((m) => m.role === "fe" || m.role === "be");
     const totalEffective = engineers.reduce((sum, m) => sum + m.allocation * (m.skill ?? 1), 0);
     return {
       id: s.id,
@@ -55,7 +55,7 @@ function countEngFte(squads: Squad[]): number {
     (sum, s) =>
       sum +
       s.members
-        .filter((m) => m.role !== "pm")
+        .filter((m) => m.role === "fe" || m.role === "be")
         .reduce((ms, m) => ms + m.allocation / 100, 0),
     0,
   );

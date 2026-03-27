@@ -1,12 +1,43 @@
-export type Role = "fe" | "be" | "pm";
+export type Role = "fe" | "be" | "pm" | "qe" | "sre" | "devops" | "design" | "data";
+
+export function isSchedulingRole(role: Role): boolean {
+  return role === "fe" || role === "be";
+}
+
+export const ROLE_META: Record<Role, { label: string; color: string }> = {
+  fe:     { label: "Frontend",  color: "blue"   },
+  be:     { label: "Backend",   color: "amber"  },
+  pm:     { label: "PM",        color: "purple" },
+  qe:     { label: "QA",        color: "teal"   },
+  sre:    { label: "SRE",       color: "orange" },
+  devops: { label: "DevOps",    color: "cyan"   },
+  design: { label: "Design",    color: "pink"   },
+  data:   { label: "Data",      color: "indigo" },
+};
+
+export type Seniority = "junior" | "mid" | "senior" | "lead" | "principal";
+
+export const SENIORITY_SKILL: Record<Seniority, number> = {
+  junior: 0.5, mid: 0.7, senior: 1.0, lead: 1.0, principal: 1.0,
+};
+
+export const SENIORITY_META: Record<Seniority, { label: string }> = {
+  junior:    { label: "Junior"    },
+  mid:       { label: "Mid"       },
+  senior:    { label: "Senior"    },
+  lead:      { label: "Lead"      },
+  principal: { label: "Principal" },
+};
 
 export type Objective = "wsjf" | "max-value" | "min-delay" | "max-throughput";
 
 export type Member = {
   id: string;
+  name?: string;
   role: Role;
+  seniority?: Seniority;
   allocation: number;
-  skill: number; // 0–1 efficiency factor, default 1.0
+  skill: number; // 0–1 efficiency factor, derived from seniority or set directly
 };
 
 export type Squad = {

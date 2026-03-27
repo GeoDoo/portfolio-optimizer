@@ -8,7 +8,7 @@ import { Squad, Scenario } from "./types";
 export function buildFullStackSquads(squads: Squad[]): Squad[] {
   return squads.map((s) => {
     const pms = s.members.filter((m) => m.role === "pm");
-    const engineers = s.members.filter((m) => m.role !== "pm");
+    const engineers = s.members.filter((m) => m.role === "fe" || m.role === "be");
     const totalEffective = engineers.reduce((sum, m) => sum + m.allocation * (m.skill ?? 1), 0);
     return {
       id: s.id,

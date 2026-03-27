@@ -179,7 +179,7 @@ export const useStore = create<Store>()(
     }),
     {
       name: "portfolio-optimizer",
-      version: 10,
+      version: 11,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 3) {
@@ -248,6 +248,17 @@ export const useStore = create<Store>()(
         }
         if (version < 10) {
           state.scenarios = state.scenarios ?? [];
+        }
+        if (version < 11) {
+          const squads = (state.squads as Record<string, unknown>[]) ?? [];
+          state.squads = squads.map((s) => ({
+            ...s,
+            members: ((s as { members?: Record<string, unknown>[] }).members ?? []).map((m) => {
+              const skill = (m.skill as number) ?? 1;
+              const seniority = skill >= 1 ? "senior" : skill >= 0.7 ? "mid" : "junior";
+              return { ...m, name: m.name ?? undefined, seniority: m.seniority ?? seniority };
+            }),
+          }));
         }
         return state;
       },

@@ -101,10 +101,10 @@ export function generateRecommendations(
     .map((d) => projects.find((p) => p.id === d.projectId))
     .filter(Boolean) as Project[];
 
-  // Try flipping each BE to FE (and vice versa) per squad — skip PMs
+  // Try flipping each BE to FE (and vice versa) per squad — only scheduling roles
   for (const squad of squads) {
     for (const member of squad.members) {
-      if (member.role === "pm") continue;
+      if (member.role !== "fe" && member.role !== "be") continue;
       const flippedRole = member.role === "be" ? "fe" : "be";
       const mutatedSquads = squads.map((s) =>
         s.id === squad.id
@@ -141,10 +141,10 @@ export function generateRecommendations(
     }
   }
 
-  // Try bumping under-100% engineers to 100% — skip PMs
+  // Try bumping under-100% scheduling members to 100%
   for (const squad of squads) {
     for (const member of squad.members) {
-      if (member.role === "pm" || member.allocation >= 100) continue;
+      if ((member.role !== "fe" && member.role !== "be") || member.allocation >= 100) continue;
 
       const mutatedSquads = squads.map((s) =>
         s.id === squad.id
@@ -405,7 +405,7 @@ function generateCandidates(
 
   for (const squad of squads) {
     for (const member of squad.members) {
-      if (member.role === "pm") continue;
+      if (member.role !== "fe" && member.role !== "be") continue;
       const flippedRole = member.role === "be" ? "fe" : "be";
       candidates.push({
         action: { type: "flip-role", squadId: squad.id, memberId: member.id, newRole: flippedRole as "fe" | "be" },
