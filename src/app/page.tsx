@@ -39,9 +39,9 @@ export default function Home() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const runOptimize = useCallback(() => {
     if (squads.length === 0 || projects.length === 0) return;
-    const result = optimize(projects, squads, horizonMonths, cycleOverheadPct);
+    const result = optimize(projects, squads, horizonMonths);
     setSchedule(result);
-  }, [projects, squads, horizonMonths, cycleOverheadPct, setSchedule]);
+  }, [projects, squads, horizonMonths, setSchedule]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -53,7 +53,7 @@ export default function Home() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [hydrated, schedule, squads, projects, horizonMonths, cycleOverheadPct, runOptimize]);
+  }, [hydrated, schedule, squads, projects, horizonMonths, runOptimize]);
 
   const alerts = useMemo(() => {
     if (!hydrated || squads.length === 0) return [];
@@ -104,8 +104,8 @@ export default function Home() {
     }
   }, [updateMember, updateProject]);
 
-  const totalFeCap = squads.reduce((sum, s) => sum + effectiveFe(s, cycleOverheadPct), 0) * horizonMonths;
-  const totalBeCap = squads.reduce((sum, s) => sum + effectiveBe(s, cycleOverheadPct), 0) * horizonMonths;
+  const totalFeCap = squads.reduce((sum, s) => sum + effectiveFe(s), 0) * horizonMonths;
+  const totalBeCap = squads.reduce((sum, s) => sum + effectiveBe(s), 0) * horizonMonths;
   const totalCap = totalFeCap + totalBeCap;
   const totalFeDemand = projects.reduce((sum, p) => sum + p.duration * p.feNeeded, 0);
   const totalBeDemand = projects.reduce((sum, p) => sum + p.duration * p.beNeeded, 0);
