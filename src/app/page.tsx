@@ -65,13 +65,13 @@ export default function Home() {
 
   const recommendations = useMemo(() => {
     if (!displaySchedule || displaySchedule.deferred.length === 0) return [];
-    return generateRecommendations(projects, squads, displaySchedule, horizonMonths, objective);
-  }, [displaySchedule, projects, squads, horizonMonths, objective]);
+    return generateRecommendations(projects, squads, displaySchedule, horizonMonths, objective, aiEffect);
+  }, [displaySchedule, projects, squads, horizonMonths, objective, aiEffect]);
 
   const optimalPlan = useMemo(() => {
     if (!displaySchedule || displaySchedule.deferred.length === 0) return null;
-    return computeOptimalPlan(projects, squads, displaySchedule, horizonMonths, objective);
-  }, [displaySchedule, projects, squads, horizonMonths, objective]);
+    return computeOptimalPlan(projects, squads, displaySchedule, horizonMonths, objective, aiEffect);
+  }, [displaySchedule, projects, squads, horizonMonths, objective, aiEffect]);
 
   const diff = useMemo(() => {
     if (!schedule || !prevSchedule) return null;

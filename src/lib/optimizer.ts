@@ -527,11 +527,12 @@ function compact(
 
 // --- Deferral reasons ---
 
-function buildDeferReason(p: Project, squads: Squad[]): string {
+function buildDeferReason(p: Project, squads: Squad[], aiEffect: number = 0): string {
+  const mul = 1 + aiEffect;
   const lines: string[] = [];
   for (const sq of squads) {
-    const maxFe = effectiveFe(sq);
-    const maxBe = effectiveBe(sq);
+    const maxFe = effectiveFe(sq) * mul;
+    const maxBe = effectiveBe(sq) * mul;
     const feOk = p.feNeeded <= maxFe;
     const beOk = p.beNeeded <= maxBe;
     if (!feOk || !beOk) {
@@ -577,7 +578,7 @@ export function optimize(
     const p = valid.find((pr) => pr.id === id);
     return {
       projectId: id,
-      reason: p ? buildDeferReason(p, squads) : "Unknown project",
+      reason: p ? buildDeferReason(p, squads, aiEffect) : "Unknown project",
     };
   });
 
