@@ -57,7 +57,7 @@ export function ProjectTable({ alerts }: { alerts?: Alert[] }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-sm font-semibold text-muted-foreground">
           Projects
         </h2>
         <Button size="sm" variant="outline" onClick={handleAdd} className="h-7 text-xs">
@@ -81,32 +81,32 @@ export function ProjectTable({ alerts }: { alerts?: Alert[] }) {
                   <th className="w-7 px-1 py-2 text-center text-xs font-semibold text-muted-foreground">#</th>
                   <th className="w-6 px-1 py-2" />
                   <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground min-w-[10rem]">Name</th>
-                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-14">
-                    <div className="leading-tight">WSJF<div className="font-normal text-[0.55rem] text-muted-foreground/60">Priority</div></div>
+                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-14" title="Calculated priority score (higher = more important)">
+                    Priority
                   </th>
-                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-12">
-                    <div className="leading-tight">Mo<div className="font-normal text-[0.55rem] text-muted-foreground/60">Months</div></div>
+                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-12" title="How long this project takes (in months)">
+                    Months
                   </th>
-                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10">
-                    <div className="leading-tight">FE<div className="font-normal text-[0.55rem] text-muted-foreground/60">Frontend</div></div>
+                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10" title="Number of frontend engineers needed">
+                    FE
                   </th>
-                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10">
-                    <div className="leading-tight">BE<div className="font-normal text-[0.55rem] text-muted-foreground/60">Backend</div></div>
+                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10" title="Number of backend engineers needed">
+                    BE
                   </th>
-                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10">
-                    <div className="leading-tight">BV<div className="font-normal text-[0.55rem] text-muted-foreground/60">Value</div></div>
+                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10" title="Business value (1-10): how valuable is this project?">
+                    Value
                   </th>
-                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10">
-                    <div className="leading-tight">TC<div className="font-normal text-[0.55rem] text-muted-foreground/60">Urgency</div></div>
+                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10" title="Time criticality (1-10): how urgent is this?">
+                    Urgency
                   </th>
-                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10">
-                    <div className="leading-tight">RR<div className="font-normal text-[0.55rem] text-muted-foreground/60">Risk</div></div>
+                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10" title="Risk reduction (1-10): does this reduce business risk?">
+                    Risk
                   </th>
-                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-12">
-                    <div className="leading-tight">DL<div className="font-normal text-[0.55rem] text-muted-foreground/60">Deadline</div></div>
+                  <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-12" title="Deadline month (optional): must finish by this month">
+                    Due
                   </th>
-                  <th className="text-left px-2 py-2 text-xs font-semibold text-muted-foreground w-24">Squad</th>
-                  <th className="text-left px-2 py-2 text-xs font-semibold text-muted-foreground min-w-[120px]">Deps</th>
+                  <th className="text-left px-2 py-2 text-xs font-semibold text-muted-foreground w-24">Team</th>
+                  <th className="text-left px-2 py-2 text-xs font-semibold text-muted-foreground min-w-[120px]" title="Other projects that must finish before this one starts">Depends on</th>
                   <th className="w-7 px-1 py-2" />
                 </tr>
               </thead>
@@ -139,7 +139,7 @@ export function ProjectTable({ alerts }: { alerts?: Alert[] }) {
                         />
                       </td>
 
-                      {/* WSJF — right after name for visibility */}
+                      {/* Priority score */}
                       <td className="px-1 py-1.5 text-center">
                         <span className={`inline-block font-mono text-xs font-bold px-1.5 py-0.5 rounded ${wsjfStyle(p._wsjf)}`}>
                           {p._wsjf.toFixed(1)}

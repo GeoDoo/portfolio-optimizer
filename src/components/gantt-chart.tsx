@@ -341,8 +341,8 @@ export function GanttChart() {
     <div className={`space-y-4 transition-opacity duration-150 ${isReoptimizing ? "opacity-50 pointer-events-none" : ""}`}>
       {/* Header */}
       <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mr-auto">
-          Schedule
+        <h2 className="text-sm font-semibold text-muted-foreground mr-auto">
+          Delivery timeline
         </h2>
         {zoom !== "year" && (
           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setZoom(zoom === "week" ? "month" : "year")}>
@@ -431,8 +431,8 @@ export function GanttChart() {
       <div className="border rounded-lg overflow-hidden">
         {/* Column headers */}
         <div className="flex bg-muted/40">
-          <div className="w-48 shrink-0 px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-r">
-            Squad
+          <div className="w-48 shrink-0 px-3 py-2.5 text-xs font-semibold text-muted-foreground border-r">
+            Team
           </div>
           <div
             className="flex-1 grid"
@@ -613,7 +613,7 @@ export function GanttChart() {
                 >
                   <div className="bg-popover text-popover-foreground shadow-lg border rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-nowrap">
                     <div className="font-semibold">
-                      #{tooltip.rank} &middot; WSJF {tooltip.w.toFixed(1)} &middot; {tooltip.proj.feNeeded} FE + {tooltip.proj.beNeeded} BE &times; {tooltip.proj.duration} mo
+                      #{tooltip.rank} &middot; Priority {tooltip.w.toFixed(1)} &middot; {tooltip.proj.feNeeded} frontend + {tooltip.proj.beNeeded} backend &times; {tooltip.proj.duration} months
                     </div>
                     {tooltip.blockedBy.length > 0 && (
                       <div className="text-muted-foreground">
@@ -636,8 +636,8 @@ export function GanttChart() {
       {/* Deferred */}
       {scheduleDeferred.length > 0 && (
         <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-destructive mb-3">
-            Deferred &mdash; {scheduleDeferred.length} project{scheduleDeferred.length > 1 ? "s" : ""}
+          <h3 className="text-xs font-semibold text-destructive mb-3">
+            Won&apos;t fit in time &mdash; {scheduleDeferred.length} project{scheduleDeferred.length > 1 ? "s" : ""}
           </h3>
           <div className="space-y-2">
             {scheduleDeferred.map((d) => {

@@ -14,13 +14,18 @@ function ReliabilityBanner({ reliability, numRuns }: { reliability: number; numR
     : reliability >= 50 ? "bg-amber-50 border-amber-200 text-amber-800"
     : "bg-red-50 border-red-200 text-red-800";
 
+  const emoji = reliability >= 80 ? "\u2705" : reliability >= 50 ? "\u26A0\uFE0F" : "\u274C";
+  const verdict = reliability >= 80 ? "Your plan looks solid"
+    : reliability >= 50 ? "Your plan has some risk"
+    : "Your plan is quite risky";
+
   return (
     <div className={`p-3 rounded-lg border ${color}`}>
       <p className="text-sm font-semibold">
-        {reliability.toFixed(0)}% plan reliability
+        {emoji} {verdict} — {reliability.toFixed(0)}% chance of delivering everything on time
       </p>
       <p className="text-xs mt-0.5 opacity-80">
-        In {reliability.toFixed(0)}% of {numRuns} simulations, all planned projects deliver within the horizon.
+        Tested across {numRuns} random scenarios with estimation errors, interruptions, and rework.
       </p>
     </div>
   );
@@ -28,28 +33,46 @@ function ReliabilityBanner({ reliability, numRuns }: { reliability: number; numR
 
 function DistributionCards({ result }: { result: SimulationResult }) {
   const cards = [
-    { label: "Projects delivered", p10: result.scheduledCountP10, p50: result.scheduledCountP50, p90: result.scheduledCountP90, fmt: (n: number) => String(Math.round(n)) },
-    { label: "Total value", p10: result.totalValueP10, p50: result.totalValueP50, p90: result.totalValueP90, fmt: (n: number) => String(Math.round(n)) },
-    { label: "Last delivery month", p10: result.lastMonthP10, p50: result.lastMonthP50, p90: result.lastMonthP90, fmt: (n: number) => `M${Math.round(n)}` },
+    {
+      label: "Projects delivered",
+      best: result.scheduledCountP90,
+      expected: result.scheduledCountP50,
+      worst: result.scheduledCountP10,
+      fmt: (n: number) => String(Math.round(n)),
+    },
+    {
+      label: "Total value delivered",
+      best: result.totalValueP90,
+      expected: result.totalValueP50,
+      worst: result.totalValueP10,
+      fmt: (n: number) => String(Math.round(n)),
+    },
+    {
+      label: "Everything done by",
+      best: result.lastMonthP10,
+      expected: result.lastMonthP50,
+      worst: result.lastMonthP90,
+      fmt: (n: number) => `Month ${Math.round(n)}`,
+    },
   ];
 
   return (
     <div className="grid grid-cols-3 gap-3">
       {cards.map((c) => (
         <div key={c.label} className="border rounded-lg p-3 space-y-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{c.label}</p>
-          <div className="flex items-baseline gap-3">
+          <p className="text-xs font-medium text-muted-foreground">{c.label}</p>
+          <div className="flex items-baseline gap-4">
             <div className="text-center">
-              <p className="text-[0.65rem] text-muted-foreground">P10</p>
-              <p className="text-sm font-semibold tabular-nums">{c.fmt(c.p10)}</p>
+              <p className="text-[0.65rem] text-green-600 font-medium">Best case</p>
+              <p className="text-sm font-semibold tabular-nums">{c.fmt(c.best)}</p>
             </div>
             <div className="text-center">
-              <p className="text-[0.65rem] text-muted-foreground">P50</p>
-              <p className="text-lg font-bold tabular-nums">{c.fmt(c.p50)}</p>
+              <p className="text-[0.65rem] text-foreground font-medium">Most likely</p>
+              <p className="text-lg font-bold tabular-nums">{c.fmt(c.expected)}</p>
             </div>
             <div className="text-center">
-              <p className="text-[0.65rem] text-muted-foreground">P90</p>
-              <p className="text-sm font-semibold tabular-nums">{c.fmt(c.p90)}</p>
+              <p className="text-[0.65rem] text-red-600 font-medium">Worst case</p>
+              <p className="text-sm font-semibold tabular-nums">{c.fmt(c.worst)}</p>
             </div>
           </div>
         </div>
@@ -64,7 +87,7 @@ function ProjectProbabilityTable({ result, projectNames }: { result: SimulationR
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="px-3 py-2 bg-muted/30 border-b">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Per-project probability</p>
+        <p className="text-xs font-semibold text-muted-foreground">How likely is each project to finish on time?</p>
       </div>
       <div className="divide-y">
         {sorted.map((ps) => {
@@ -89,10 +112,10 @@ function ProjectProbabilityTable({ result, projectNames }: { result: SimulationR
               <span className="text-[0.7rem] font-semibold tabular-nums w-10 text-right">
                 {ps.completionPct.toFixed(0)}%
               </span>
-              <div className="flex gap-2 text-[0.65rem] text-muted-foreground tabular-nums shrink-0">
-                <span>P10: M{ps.deliveryP10}</span>
-                <span>P50: M{ps.deliveryP50}</span>
-                <span>P90: M{ps.deliveryP90}</span>
+              <div className="flex gap-3 text-[0.65rem] text-muted-foreground tabular-nums shrink-0">
+                <span title="Best case delivery month">Best: M{ps.deliveryP10}</span>
+                <span title="Most likely delivery month">Likely: M{ps.deliveryP50}</span>
+                <span title="Worst case delivery month">Worst: M{ps.deliveryP90}</span>
               </div>
             </div>
           );
@@ -120,32 +143,39 @@ function UncertaintyControls({
   progress: number;
 }) {
   const sliders = [
-    { key: "estimationErrorPct" as const, label: "Estimation error", max: 80, tip: "How much project durations vary from estimates" },
-    { key: "reworkProbPct" as const, label: "Rework probability", max: 50, tip: "Chance a project needs 50% more time due to rework" },
-    { key: "dependencyDelayPct" as const, label: "Dependency delay", max: 50, tip: "Chance each dependency adds a 1-month delay" },
-    { key: "interruptionProbPct" as const, label: "Squad interruption", max: 40, tip: "Chance a squad loses a month to unplanned work" },
+    { key: "estimationErrorPct" as const, label: "How wrong are estimates?", max: 80, tip: "Real projects rarely take exactly as long as planned" },
+    { key: "reworkProbPct" as const, label: "Chance of rework?", max: 50, tip: "How often a project needs to redo some work" },
+    { key: "dependencyDelayPct" as const, label: "Chance of delays from blockers?", max: 50, tip: "How often a dependency causes a delay" },
+    { key: "interruptionProbPct" as const, label: "Chance of unexpected work?", max: 40, tip: "How often a team gets pulled into unplanned work" },
   ];
 
   return (
     <div className="border rounded-lg p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Uncertainty parameters</p>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground">How messy is the real world?</p>
+          <p className="text-[0.65rem] text-muted-foreground/70">Adjust these sliders to match your reality. Higher = more chaos.</p>
+        </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-md border border-input overflow-hidden">
-            {RUN_COUNTS.map((n) => (
-              <button
-                key={n}
-                onClick={() => onNumRunsChange(n)}
-                className={`px-2 py-0.5 text-[0.65rem] font-medium transition-colors ${
-                  numRuns === n ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                {n}
-              </button>
-            ))}
+            {RUN_COUNTS.map((n) => {
+              const label = n <= 100 ? "Quick" : n <= 500 ? "Standard" : "Thorough";
+              return (
+                <button
+                  key={n}
+                  onClick={() => onNumRunsChange(n)}
+                  title={`Run ${n} scenarios`}
+                  className={`px-2 py-0.5 text-[0.65rem] font-medium transition-colors ${
+                    numRuns === n ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
           <Button size="sm" onClick={onRun} disabled={running} className="h-7 text-xs">
-            {running ? `${progress.toFixed(0)}%` : "Run simulation"}
+            {running ? `${progress.toFixed(0)}%...` : "Run analysis"}
           </Button>
         </div>
       </div>
@@ -240,15 +270,15 @@ export function ForecastView({
 
       {!result && !running && (
         <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed rounded-lg">
-          <p className="text-sm font-medium">Ready to simulate</p>
+          <p className="text-sm font-medium">Ready to test your plan</p>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-            Click &quot;Run simulation&quot; above to run {numRunsRef.current} Monte Carlo scenarios. Each scenario adds random estimation errors, rework, and interruptions to stress-test your plan.
+            We&apos;ll simulate your plan many times with random problems (missed estimates, rework, interruptions) to see how likely it is to work out.
           </p>
           <button
             onClick={handleRun}
             className="mt-4 px-5 py-2 text-xs font-semibold rounded-lg bg-foreground text-background hover:bg-foreground/90 transition-colors"
           >
-            Run simulation now
+            Test my plan now
           </button>
         </div>
       )}

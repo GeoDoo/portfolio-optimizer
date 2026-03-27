@@ -13,44 +13,32 @@ type Step = {
 
 const STEPS: Step[] = [
   {
-    title: "Welcome to Portfolio Optimizer",
+    title: "Hi! Let's plan your projects",
     description:
-      "This tool helps you plan and optimize your team's project delivery. It figures out the best order to work on projects based on your team capacity and priorities.",
+      "This tool figures out the best order to do your work. Tell it about your teams and projects, and it creates an optimized plan.",
   },
   {
-    title: "1. Set up your teams",
+    title: "Add your teams",
     description:
-      "Start by defining your squads (teams). Each squad has members with roles (FE, BE, PM) and allocation percentages. This determines your delivery capacity.",
+      "Each team has people (frontend engineers, backend engineers, product managers). The tool uses this to know how much work your teams can handle.",
     target: "squads",
   },
   {
-    title: "2. Add your projects",
+    title: "Add your projects",
     description:
-      "Add projects with their requirements (how many FE/BE engineers, duration) and business value. The optimizer uses this to prioritize work.",
+      "For each project, say how many people it needs and how long it takes. Give it a value score so the tool knows what matters most.",
     target: "projects",
   },
   {
-    title: "3. Configure your planning horizon",
+    title: "See the plan",
     description:
-      "Set the time window for planning (start date, number of months), your sprint cycle length, and choose a prioritization objective (WSJF is the default — it balances value and effort).",
-    target: "settings",
-  },
-  {
-    title: "4. View the optimized schedule",
-    description:
-      "The Schedule tab shows a Gantt chart of your optimized delivery plan. Projects are color-coded by squad and ordered by priority. If projects can't fit, they're listed as deferred with reasons.",
+      "The Timeline shows when each project starts and finishes. Risk Analysis shows how likely the plan is to work out. Team Comparison shows what happens if you change your team setup.",
     target: "views",
   },
   {
-    title: "5. Run a Monte Carlo forecast",
+    title: "Want to try it now?",
     description:
-      "The Forecast tab runs hundreds of simulations with random variations (estimation errors, rework, interruptions) to show how likely your plan is to succeed. Adjust the uncertainty sliders to match your reality.",
-    target: "views",
-  },
-  {
-    title: "Quick start: Load sample data",
-    description:
-      "Don't have your own data yet? Click \"Load sample data\" in the top-right to see the tool in action with a realistic example of 3 squads and 10 projects.",
+      "Load some sample data to see the tool in action right away, or start adding your own teams and projects.",
     action: "load-sample",
   },
 ];

@@ -18,27 +18,27 @@ type ScenarioKey = "traditional" | "sameTeamAI" | "miniSquad";
 const TABLE_SCENARIOS: { key: ScenarioKey; title: string; color: string; description: string }[] = [
   {
     key: "traditional",
-    title: "Traditional",
+    title: "Current setup",
     color: "text-slate-700",
-    description: "FE/BE specialised roles",
+    description: "Your existing teams",
   },
   {
     key: "sameTeamAI",
-    title: "Full-stack AI",
+    title: "Full-stack + AI",
     color: "text-emerald-700",
-    description: "Same headcount, full-stack",
+    description: "Same people, all full-stack",
   },
   {
     key: "miniSquad",
-    title: "Mini squad",
+    title: "Tiny AI team",
     color: "text-violet-700",
-    description: "1 Eng + 1 PM per squad",
+    description: "1 engineer + 1 PM per team",
   },
 ];
 
 const GANTT_SCENARIOS: { key: ScenarioKey; title: string; bg: string; color: string }[] = [
-  { key: "sameTeamAI", title: "Full-stack AI", bg: "bg-emerald-50 border-emerald-200", color: "text-emerald-700" },
-  { key: "miniSquad", title: "Mini squad", bg: "bg-violet-50 border-violet-200", color: "text-violet-700" },
+  { key: "sameTeamAI", title: "Full-stack + AI", bg: "bg-emerald-50 border-emerald-200", color: "text-emerald-700" },
+  { key: "miniSquad", title: "Tiny AI team", bg: "bg-violet-50 border-violet-200", color: "text-violet-700" },
 ];
 
 function fmt(n: number, decimals = 1): string {
@@ -193,27 +193,27 @@ export function ComparisonDashboard({
 
     if (cycleOverheadPct > 0) {
       lines.push(
-        `Your ${cycleLengthWeeks}-week cycles lose ~${fmt(comparison.overheadGainPct)}% of productive capacity to ceremony (planning, retros, demos). Daily AI cycles eliminate this.`,
+        `Your teams spend about ${fmt(comparison.overheadGainPct)}% of their time in meetings and ceremonies instead of building. Shorter cycles with AI could reduce this.`,
       );
     }
 
     if (comparison.flexibilityGainPct > 0.5) {
       const extra = comparison.sameTeamAI.scheduledCount - trad.scheduledCount;
       lines.push(
-        `Switching to full-stack engineers delivers ${fmt(comparison.flexibilityGainPct)}% more value` +
-        (extra > 0 ? ` and ${extra} more project${extra > 1 ? "s" : ""}` : "") +
-        ` by eliminating FE/BE bottlenecks — same ${trad.headcount} people, zero additional headcount.`,
+        `If your engineers could work on both frontend and backend, you'd deliver ${fmt(comparison.flexibilityGainPct)}% more value` +
+        (extra > 0 ? ` and ${extra} extra project${extra > 1 ? "s" : ""}` : "") +
+        ` — same ${trad.headcount} people, no extra hiring.`,
       );
     } else {
       lines.push(
-        `Your current FE/BE mix already handles this project portfolio well. Full-stack flexibility yields minimal additional scheduling gains with this workload.`,
+        `Your current team setup is well balanced for this set of projects. Making everyone full-stack wouldn't help much here.`,
       );
     }
 
     const beMult = comparison.breakEvenMultiplier;
     const miniHc = comparison.miniSquad.headcount;
     lines.push(
-      `To match traditional output with AI mini squads (${miniHc} people vs ${trad.headcount}), each AI-assisted engineer needs to be at least ${fmt(beMult)}x as productive.`,
+      `A tiny AI team (${miniHc} people instead of ${trad.headcount}) would need each person to be ${fmt(beMult)}x more productive to deliver the same results.`,
     );
 
     return lines;
@@ -222,48 +222,48 @@ export function ComparisonDashboard({
   return (
     <div className="space-y-5">
       {/* Section header */}
-      <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          AI Advantage Analysis
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground">
+          What if you changed your team setup?
         </h2>
-        <span className="text-[0.65rem] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
-          Derived from your data
-        </span>
+        <p className="text-xs text-muted-foreground/70 mt-0.5">
+          We compare your current teams against two alternative setups — all based on your actual projects.
+        </p>
       </div>
 
-      {/* Gain breakdown */}
+      {/* Key numbers */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 border rounded-lg bg-blue-50/40 border-blue-200/50">
-          <div className="text-[0.65rem] font-medium uppercase tracking-wider text-blue-600 mb-1">
-            Ceremony overhead cost
+          <div className="text-xs font-medium text-blue-600 mb-1">
+            Time lost to meetings
           </div>
           <div className="text-2xl font-bold text-blue-700 tabular-nums">
             {fmt(comparison.overheadGainPct)}%
           </div>
           <div className="text-[0.65rem] text-blue-600/70 mt-1">
-            of productive time lost to {cycleOverheadPct}% cycle ceremony
+            of work time goes to planning, retros, demos
           </div>
         </div>
         <div className="p-4 border rounded-lg bg-emerald-50/40 border-emerald-200/50">
-          <div className="text-[0.65rem] font-medium uppercase tracking-wider text-emerald-600 mb-1">
-            Full-stack flexibility
+          <div className="text-xs font-medium text-emerald-600 mb-1">
+            Full-stack advantage
           </div>
           <div className="text-2xl font-bold text-emerald-700 tabular-nums">
             +{fmt(comparison.flexibilityGainPct)}%
           </div>
           <div className="text-[0.65rem] text-emerald-600/70 mt-1">
-            additional value from eliminating FE/BE bottleneck
+            more value delivered by removing role bottlenecks
           </div>
         </div>
         <div className="p-4 border rounded-lg bg-violet-50/40 border-violet-200/50">
-          <div className="text-[0.65rem] font-medium uppercase tracking-wider text-violet-600 mb-1">
-            Break-even multiplier
+          <div className="text-xs font-medium text-violet-600 mb-1">
+            AI must make each person
           </div>
           <div className="text-2xl font-bold text-violet-700 tabular-nums">
-            {fmt(comparison.breakEvenMultiplier)}x
+            {fmt(comparison.breakEvenMultiplier)}x faster
           </div>
           <div className="text-[0.65rem] text-violet-600/70 mt-1">
-            min AI productivity for mini squad to match traditional
+            for a tiny AI team to match your current output
           </div>
         </div>
       </div>
@@ -284,12 +284,12 @@ export function ComparisonDashboard({
           </thead>
           <tbody className="divide-y">
             {([
-              { label: "Headcount", key: "headcount" as const, lower: true, unit: "" },
-              { label: "Eng FTE", key: "engineeringFte" as const, lower: false, unit: "" },
+              { label: "Team size", key: "headcount" as const, lower: true, unit: " people" },
+              { label: "Engineering capacity", key: "engineeringFte" as const, lower: false, unit: "" },
               { label: "Projects delivered", key: "scheduledCount" as const, lower: false, unit: "" },
-              { label: "Deferred", key: "deferredCount" as const, lower: true, unit: "" },
-              { label: "Value delivered", key: "totalValueDelivered" as const, lower: false, unit: " pts" },
-              { label: "Avg lead time", key: "avgLeadTime" as const, lower: true, unit: " mo" },
+              { label: "Projects that won't fit", key: "deferredCount" as const, lower: true, unit: "" },
+              { label: "Total value delivered", key: "totalValueDelivered" as const, lower: false, unit: " pts" },
+              { label: "Average time to deliver", key: "avgLeadTime" as const, lower: true, unit: " months" },
             ] as const).map((row) => {
               const tradVal = trad[row.key] as number;
               const fmtVal = (v: number) =>
@@ -360,10 +360,10 @@ export function ComparisonDashboard({
         </div>
       </div>
 
-      {/* Executive summary */}
+      {/* Plain English summary */}
       <div className="p-4 border rounded-lg bg-gradient-to-r from-violet-50/60 to-blue-50/60 border-violet-200/40">
-        <div className="text-xs font-bold uppercase tracking-wider text-violet-700 mb-2">
-          Key findings
+        <div className="text-xs font-bold text-violet-700 mb-2">
+          What does this mean?
         </div>
         <div className="space-y-1.5">
           {insights.map((line, i) => (

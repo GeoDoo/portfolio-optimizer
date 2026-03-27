@@ -64,10 +64,10 @@ export function RecommendationsPanel({
         return (
         <div className="p-3 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/60 dark:border-blue-800/40 text-sm">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
-              {totalChanges} schedule change{totalChanges !== 1 ? "s" : ""}
-              {diff.newlyScheduled.length > 0 && <span className="text-emerald-600 ml-2">+{diff.newlyScheduled.length} new</span>}
-              {diff.newlyDeferred.length > 0 && <span className="text-red-500 ml-2">{diff.newlyDeferred.length} deferred</span>}
+            <h3 className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+              Plan updated: {totalChanges} change{totalChanges !== 1 ? "s" : ""}
+              {diff.newlyScheduled.length > 0 && <span className="text-emerald-600 ml-2">+{diff.newlyScheduled.length} added</span>}
+              {diff.newlyDeferred.length > 0 && <span className="text-red-500 ml-2">{diff.newlyDeferred.length} removed</span>}
               {diff.moved.length > 0 && <span className="text-blue-500 ml-2">{diff.moved.length} moved</span>}
             </h3>
             <button
@@ -109,8 +109,8 @@ export function RecommendationsPanel({
         <div className="p-4 border-2 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-300/70 dark:border-emerald-700/50">
           <div className="flex items-start gap-3">
             <div className="flex-1 min-w-0">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 mb-1.5">
-                Recommended plan
+              <h3 className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 mb-1.5">
+                We found a better plan
               </h3>
               <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
                 {optimalPlan.actions.length === 1 ? "1 change" : `${optimalPlan.actions.length} changes`}
@@ -148,8 +148,8 @@ export function RecommendationsPanel({
       {visible.length > 0 && (
         <div className="p-3 border rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/60 dark:border-amber-800/40">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
-              {optimalPlan ? "Individual alternatives" : "Recommendations"}
+            <h3 className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+              {optimalPlan ? "Other ideas to try" : "Suggestions to improve your plan"}
             </h3>
             <div className="flex items-center gap-2">
               {dismissed.size > 0 && (
