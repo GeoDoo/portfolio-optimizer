@@ -7,7 +7,7 @@ import { SimulationInput } from "@/lib/simulator";
 import { SimulationResult, UncertaintyParams } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 
-const RUN_COUNTS = [200, 500, 1000] as const;
+const RUN_COUNTS = [100, 500, 1000] as const;
 
 function ReliabilityBanner({ reliability, numRuns }: { reliability: number; numRuns: number }) {
   const color = reliability >= 80 ? "bg-emerald-50 border-emerald-200 text-emerald-800"

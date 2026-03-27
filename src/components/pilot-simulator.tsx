@@ -163,7 +163,7 @@ export function PilotSimulator({
             className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} ({p.feNeeded}FE + {p.beNeeded}BE, {p.duration}mo)</option>
+              <option key={p.id} value={p.id}>{p.name} ({p.feNeeded} FE + {p.beNeeded} BE, {p.duration} mo)</option>
             ))}
           </select>
         </div>
@@ -182,7 +182,7 @@ export function PilotSimulator({
         )}
 
         <div className="p-2.5 border rounded-lg bg-violet-50/50 space-y-2.5">
-          <p className="text-[0.65rem] font-semibold text-violet-700">AI pilot squad</p>
+          <p className="text-[0.65rem] font-semibold text-violet-700">AI pilot team</p>
 
           <div className="space-y-1">
             <label className="text-[0.65rem] text-muted-foreground">Engineers</label>
@@ -221,7 +221,7 @@ export function PilotSimulator({
           </div>
 
           <div className="text-[0.6rem] text-violet-600 pt-1 border-t">
-            {numEngineers} eng{numEngineers > 1 ? "s" : ""}{includePm ? " + 1 PM" : ""} = {numEngineers + (includePm ? 1 : 0)}p
+            {numEngineers} eng{numEngineers > 1 ? "s" : ""}{includePm ? " + 1 PM" : ""} = {numEngineers + (includePm ? 1 : 0)} people
             {multiplier > 1 && ` @ ${multiplier}x`}
           </div>
         </div>
@@ -236,14 +236,14 @@ export function PilotSimulator({
               <div className="text-xl font-bold text-slate-800 tabular-nums">
                 {tradMonths != null ? `${tradMonths}mo` : "Won\u2019t fit"}
               </div>
-              <p className="text-[0.6rem] text-slate-500 mt-0.5">{traditionalResult?.teamSize ?? 0}p</p>
+              <p className="text-[0.6rem] text-slate-500 mt-0.5">{traditionalResult?.teamSize ?? 0} people</p>
             </div>
             <div className="p-3 border rounded-lg bg-violet-50/50">
               <p className="text-[0.65rem] font-semibold text-violet-600 mb-1">AI Pilot</p>
               <div className="text-xl font-bold text-violet-800 tabular-nums">
                 {pilotMonths != null ? `${pilotMonths}mo` : "Won\u2019t fit"}
               </div>
-              <p className="text-[0.6rem] text-violet-500 mt-0.5">{numEngineers + (includePm ? 1 : 0)}p @ {multiplier}x</p>
+              <p className="text-[0.6rem] text-violet-500 mt-0.5">{numEngineers + (includePm ? 1 : 0)} people @ {multiplier}x</p>
             </div>
           </div>
         )}

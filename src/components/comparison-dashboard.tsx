@@ -73,7 +73,7 @@ function MiniGantt({
     <div className="border rounded-lg overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/30">
         <span className="text-[0.65rem] font-semibold">{label}</span>
-        <span className="text-[0.6rem] text-muted-foreground ml-auto">{headcount}p</span>
+        <span className="text-[0.6rem] text-muted-foreground ml-auto">{headcount} people</span>
       </div>
       <div className="relative">
         {squadIds.length === 0 && (
@@ -134,8 +134,6 @@ export function ComparisonDashboard({
   comparison: ComparisonResult;
   projects: Project[];
   horizonMonths: number;
-  cycleLengthWeeks: number;
-  cycleOverheadPct: number;
 }) {
   const [ganttView, setGanttView] = useState<ScenarioKey>("sameTeamAI");
   const trad = comparison.traditional;
@@ -161,7 +159,7 @@ export function ComparisonDashboard({
           <div className="text-[0.65rem] text-violet-600 mb-1">AI break-even</div>
           <div className="text-xl font-bold text-violet-700 tabular-nums">{fmt(comparison.breakEvenMultiplier)}x</div>
           <div className="text-[0.6rem] text-muted-foreground mt-0.5">
-            productivity for {comparison.miniSquad.headcount}p to match {trad.headcount}p
+            productivity for {comparison.miniSquad.headcount} to match {trad.headcount} people
           </div>
         </div>
       </div>
@@ -180,7 +178,7 @@ export function ComparisonDashboard({
           <tbody className="divide-y">
             {([
               { label: "People", key: "headcount" as const, lower: true, unit: "" },
-              { label: "Eng capacity", key: "engineeringFte" as const, lower: false, unit: "" },
+              { label: "Engineers", key: "engineeringFte" as const, lower: false, unit: "" },
               { label: "Delivered", key: "scheduledCount" as const, lower: false, unit: "" },
               { label: "Deferred", key: "deferredCount" as const, lower: true, unit: "" },
               { label: "Value", key: "totalValueDelivered" as const, lower: false, unit: "" },
@@ -243,14 +241,14 @@ export function ComparisonDashboard({
             entries={trad.entries}
             projects={projects}
             horizonMonths={horizonMonths}
-            label={`Current (${trad.headcount}p, ${numSquads} teams)`}
+            label={`Current (${trad.headcount} people, ${numSquads} teams)`}
             headcount={trad.headcount}
           />
           <MiniGantt
             entries={ganttScenario.entries}
             projects={projects}
             horizonMonths={horizonMonths}
-            label={`${ganttScenario.label} (${ganttScenario.headcount}p, ${numSquads} teams)`}
+            label={`${ganttScenario.label} (${ganttScenario.headcount} people, ${numSquads} teams)`}
             headcount={ganttScenario.headcount}
           />
         </div>

@@ -345,8 +345,6 @@ export default function Home() {
               comparison={comparison}
               projects={projects}
               horizonMonths={horizonMonths}
-              cycleLengthWeeks={cycleLengthWeeks}
-              cycleOverheadPct={cycleOverheadPct}
             />
           )}
         </section>

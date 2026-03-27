@@ -231,7 +231,7 @@ export function ProjectTable({ alerts }: { alerts?: Alert[] }) {
                           onChange={(e) => updateProject(p.id, { squadId: e.target.value })}
                           className={selectClass}
                         >
-                          {squads.length === 0 && <option value="">No squads</option>}
+                          {squads.length === 0 && <option value="">No teams</option>}
                           {squads.map((sq) => (
                             <option key={sq.id} value={sq.id}>{sq.name}</option>
                           ))}

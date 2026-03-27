@@ -163,14 +163,14 @@ export function runComparison(
   //    requirements can't be reduced by fractional overhead without breaking)
   const tradSchedule = optimize(projects, squads, horizonMonths, objective);
   const traditional = collectMetrics(
-    "Traditional", tradSchedule, projects, tradHeadcount, tradEngFte, horizonMonths, squads,
+    "Current", tradSchedule, projects, tradHeadcount, tradEngFte, horizonMonths, squads,
   );
 
   // 2. Same team, AI-enabled: same headcount, full-stack + 0% overhead
   const fsSquads = buildFullStackSquads(squads);
   const fsSchedule = optimize(projects, fsSquads, horizonMonths, objective);
   const sameTeamAI = collectMetrics(
-    "Same team, AI-enabled", fsSchedule, projects,
+    "Full-stack + AI", fsSchedule, projects,
     tradHeadcount, tradEngFte, horizonMonths, fsSquads,
   );
 
@@ -180,7 +180,7 @@ export function runComparison(
   const miniEngFte = squads.length * 1;
   const miniSchedule = optimize(projects, miniSquads, horizonMonths, objective);
   const miniSquad = collectMetrics(
-    "AI mini squad (1x)", miniSchedule, projects,
+    "Tiny AI teams", miniSchedule, projects,
     miniHeadcount, miniEngFte, horizonMonths, miniSquads,
   );
 

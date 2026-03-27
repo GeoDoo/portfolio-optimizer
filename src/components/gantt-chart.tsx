@@ -308,7 +308,7 @@ export function GanttChart() {
               <div
                 key={i}
                 className={`px-1 py-2 text-center text-xs font-medium text-muted-foreground border-l transition-colors ${
-                  zoom !== "week" ? "cursor-pointer hover:bg-accent/50" : ""
+                  zoom !== "week" ? "cursor-pointer hover:bg-accent/50 hover:underline" : ""
                 }`}
                 onClick={() => {
                   if (zoom === "year") { setFocusMonth(i); setFocusWeek(0); setZoom("month"); }
@@ -442,7 +442,7 @@ export function GanttChart() {
                 >
                   <div className="bg-popover text-popover-foreground shadow-lg border rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-nowrap">
                     <div className="font-semibold">
-                      #{tooltip.rank} &middot; {tooltip.proj.feNeeded}FE + {tooltip.proj.beNeeded}BE &times; {tooltip.proj.duration}mo
+                      #{tooltip.rank} &middot; {tooltip.proj.feNeeded} FE + {tooltip.proj.beNeeded} BE &times; {tooltip.proj.duration} mo
                     </div>
                     {tooltip.blockedBy.length > 0 && (
                       <div className="text-muted-foreground">Blocked by: {tooltip.blockedBy.join(", ")}</div>
