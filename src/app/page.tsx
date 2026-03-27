@@ -5,7 +5,7 @@ import { useStore } from "@/lib/store";
 import { optimize, effectiveFe, effectiveBe } from "@/lib/optimizer";
 import { analyzeProjects, generateRecommendations, computeDiff, computeOptimalPlan } from "@/lib/alerts";
 import { SEED_SQUADS, SEED_PROJECTS } from "@/lib/seed";
-import { RecommendationAction, OptimalPlan, ComparisonResult } from "@/lib/types";
+import { RecommendationAction, OptimalPlan, ComparisonResult, Objective } from "@/lib/types";
 import { runComparison } from "@/lib/ai-comparison";
 import { SquadTable } from "@/components/squad-table";
 import { ProjectTable } from "@/components/project-table";
@@ -30,18 +30,18 @@ export default function Home() {
   const {
     squads, projects, schedule, prevSchedule,
     horizonMonths, horizonStartMonth, horizonStartYear,
-    cycleLengthWeeks, cycleOverheadPct,
+    cycleLengthWeeks, cycleOverheadPct, objective,
     setSchedule, setHorizonMonths, setHorizonStart,
-    setCycleLengthWeeks, setCycleOverheadPct,
+    setCycleLengthWeeks, setCycleOverheadPct, setObjective,
     loadData, updateMember, updateProject, addProject,
   } = useStore();
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const runOptimize = useCallback(() => {
     if (squads.length === 0 || projects.length === 0) return;
-    const result = optimize(projects, squads, horizonMonths);
+    const result = optimize(projects, squads, horizonMonths, objective);
     setSchedule(result);
-  }, [projects, squads, horizonMonths, setSchedule]);
+  }, [projects, squads, horizonMonths, objective, setSchedule]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -209,6 +209,33 @@ export default function Home() {
             onChange={(e) => setCycleOverheadPct(Math.max(0, Math.min(50, parseInt(e.target.value) || 0)))}
             className="flex h-8 w-14 rounded-md border border-input bg-background px-2.5 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
+        </div>
+
+        <div className="w-px h-8 bg-border" />
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Objective
+          </label>
+          <div className="flex rounded-md border border-input overflow-hidden">
+            {([
+              { id: "wsjf" as Objective, label: "WSJF" },
+              { id: "max-value" as Objective, label: "Value" },
+              { id: "min-delay" as Objective, label: "Delay" },
+              { id: "max-throughput" as Objective, label: "Speed" },
+            ]).map((o) => (
+              <button
+                key={o.id}
+                onClick={() => setObjective(o.id)}
+                className={`px-2 py-1 text-[0.65rem] font-medium transition-colors ${
+                  objective === o.id
+                    ? "bg-foreground text-background"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {squads.length > 0 && (
