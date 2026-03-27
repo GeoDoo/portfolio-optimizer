@@ -1,5 +1,7 @@
 export type Role = "fe" | "be" | "pm";
 
+export type Objective = "wsjf" | "max-value" | "min-delay" | "max-throughput";
+
 export type Member = {
   id: string;
   role: Role;
