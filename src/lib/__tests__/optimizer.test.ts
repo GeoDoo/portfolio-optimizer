@@ -809,3 +809,84 @@ describe("Integration — realistic portfolio scenarios", () => {
     expect(efe.startMonth).toBe(4);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Objective strategies
+// ---------------------------------------------------------------------------
+
+describe("Objective strategies", () => {
+  it("max-throughput schedules small projects first", () => {
+    const sq = makeSquad("Alpha", [100], [100]);
+    const big = makeProject("BigValueBig", {
+      squadId: sq.id, duration: 3, feNeeded: 1, beNeeded: 1,
+      businessValue: 8, timeCriticality: 8, riskReduction: 8,
+    });
+    const small = makeProject("SmallA", {
+      squadId: sq.id, duration: 1, feNeeded: 1, beNeeded: 1,
+      businessValue: 7, timeCriticality: 7, riskReduction: 7,
+    });
+
+    const maxVal = optimize([big, small], [sq], 6, "max-value");
+    const maxThr = optimize([big, small], [sq], 6, "max-throughput");
+
+    expect(findEntry(maxVal, big.id)!.startMonth).toBe(0);
+    expect(findEntry(maxThr, small.id)!.startMonth).toBe(0);
+  });
+
+  it("min-delay prioritizes deadlined projects over higher-WSJF projects", () => {
+    const sq = makeSquad("Alpha", [100], [100]);
+    const urgent = makeProject("Urgent", {
+      squadId: sq.id, duration: 2, feNeeded: 1, beNeeded: 1,
+      businessValue: 3, timeCriticality: 3, riskReduction: 3, deadline: 3,
+    });
+    const highWsjf = makeProject("HighWSJF", {
+      squadId: sq.id, duration: 1, feNeeded: 1, beNeeded: 1,
+      businessValue: 10, timeCriticality: 10, riskReduction: 10,
+    });
+
+    const wsjfResult = optimize([urgent, highWsjf], [sq], 6, "wsjf");
+    const delayResult = optimize([urgent, highWsjf], [sq], 6, "min-delay");
+
+    const wsjfFirst = wsjfResult.entries.find((e) => e.startMonth === 0)!;
+    expect(wsjfFirst.projectId).toBe(highWsjf.id);
+
+    const delayFirst = delayResult.entries.find((e) => e.startMonth === 0)!;
+    expect(delayFirst.projectId).toBe(urgent.id);
+  });
+
+  it("max-value picks high-value large project over high-WSJF small project", () => {
+    const sq = makeSquad("Alpha", [100], [100]);
+    const largeHighVal = makeProject("LargeHighVal", {
+      squadId: sq.id, duration: 3, feNeeded: 1, beNeeded: 1,
+      businessValue: 10, timeCriticality: 10, riskReduction: 10,
+    });
+    const smallHighWsjf = makeProject("SmallHighWSJF", {
+      squadId: sq.id, duration: 1, feNeeded: 1, beNeeded: 1,
+      businessValue: 9, timeCriticality: 9, riskReduction: 9,
+    });
+
+    const maxValResult = optimize([largeHighVal, smallHighWsjf], [sq], 6, "max-value");
+
+    const first = maxValResult.entries.find((e) => e.startMonth === 0)!;
+    expect(first.projectId).toBe(largeHighVal.id);
+  });
+
+  it("all objectives produce valid schedules (no capacity violations)", () => {
+    const sq = makeSquad("Alpha", [100, 80], [100]);
+    const projects = [
+      makeProject("A", { squadId: sq.id, duration: 2, feNeeded: 1, beNeeded: 1, businessValue: 8, timeCriticality: 5, riskReduction: 3, deadline: 4 }),
+      makeProject("B", { squadId: sq.id, duration: 1, feNeeded: 1, beNeeded: 1, businessValue: 3, timeCriticality: 3, riskReduction: 3 }),
+      makeProject("C", { squadId: sq.id, duration: 3, feNeeded: 1, beNeeded: 1, businessValue: 10, timeCriticality: 10, riskReduction: 10 }),
+    ];
+
+    for (const obj of ["wsjf", "max-value", "min-delay", "max-throughput"] as const) {
+      const result = optimize(projects, [sq], 6, obj);
+      expect(result.entries.length + result.deferred.length).toBe(projects.length);
+      for (const e of result.entries) {
+        expect(e.startMonth).toBeGreaterThanOrEqual(0);
+        expect(e.endMonth).toBeLessThanOrEqual(6);
+        expect(e.endMonth).toBeGreaterThan(e.startMonth);
+      }
+    }
+  });
+});
