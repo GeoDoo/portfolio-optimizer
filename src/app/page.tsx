@@ -13,6 +13,7 @@ import { GanttChart } from "@/components/gantt-chart";
 import { RecommendationsPanel } from "@/components/recommendations";
 import { ComparisonDashboard } from "@/components/comparison-dashboard";
 import { ForecastView } from "@/components/forecast-view";
+import { PilotSimulator } from "@/components/pilot-simulator";
 import { Button } from "@/components/ui/button";
 import { OnboardingWizard, HelpButton } from "@/components/onboarding";
 
@@ -46,7 +47,7 @@ export default function Home() {
   } = useStore();
 
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [activeView, setActiveView] = useState<"schedule" | "forecast" | "comparison">("schedule");
+  const [activeView, setActiveView] = useState<"schedule" | "forecast" | "pilot" | "comparison">("schedule");
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const runOptimize = useCallback(() => {
@@ -388,7 +389,8 @@ export default function Home() {
             {([
               { key: "schedule" as const, label: "Timeline", desc: "See when each project gets delivered" },
               { key: "forecast" as const, label: "Risk analysis", desc: "How likely is your plan to succeed?" },
-              { key: "comparison" as const, label: "Team comparison", desc: "What if you changed your team setup?" },
+              { key: "pilot" as const, label: "Pilot simulator", desc: "Test an AI squad on one project before going all-in" },
+              { key: "comparison" as const, label: "Team comparison", desc: "What if you changed your entire team setup?" },
             ]).map((tab) => (
               <button
                 key={tab.key}
@@ -408,13 +410,22 @@ export default function Home() {
           <p className="text-xs text-muted-foreground">
             {activeView === "schedule" && "This timeline shows when each project is planned to start and finish, organized by team."}
             {activeView === "forecast" && "This runs hundreds of \"what if\" scenarios to show the chance your plan delivers on time."}
-            {activeView === "comparison" && "See how your plan changes if you reorganize your teams or add AI tools."}
+            {activeView === "pilot" && "Pick one project, set up a small AI team, and see if they can deliver it faster."}
+            {activeView === "comparison" && "See how your plan changes if you reorganize all your teams or add AI tools."}
           </p>
 
           {/* Views */}
           {activeView === "schedule" && <GanttChart />}
           {activeView === "forecast" && (
             <ForecastView deterministicScheduledCount={displaySchedule.entries.length} />
+          )}
+          {activeView === "pilot" && (
+            <PilotSimulator
+              projects={projects}
+              squads={squads}
+              horizonMonths={horizonMonths}
+              objective={objective}
+            />
           )}
           {activeView === "comparison" && comparison && (
             <ComparisonDashboard
