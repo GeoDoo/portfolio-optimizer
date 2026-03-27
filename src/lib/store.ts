@@ -122,7 +122,7 @@ export const useStore = create<Store>()(
     }),
     {
       name: "portfolio-optimizer",
-      version: 6,
+      version: 7,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 3) {
@@ -135,8 +135,8 @@ export const useStore = create<Store>()(
             const beCount = (s.beCount as number) ?? Math.floor(((s.members as number) || 3) / 2);
             const alloc = (s.allocation as number) ?? 100;
             const members: Member[] = [];
-            for (let i = 0; i < feCount; i++) members.push({ id: crypto.randomUUID(), role: "fe", allocation: alloc });
-            for (let i = 0; i < beCount; i++) members.push({ id: crypto.randomUUID(), role: "be", allocation: alloc });
+            for (let i = 0; i < feCount; i++) members.push({ id: crypto.randomUUID(), role: "fe", allocation: alloc, skill: 1 });
+            for (let i = 0; i < beCount; i++) members.push({ id: crypto.randomUUID(), role: "be", allocation: alloc, skill: 1 });
             return { id: s.id, name: s.name, members };
           });
         }
@@ -161,6 +161,18 @@ export const useStore = create<Store>()(
         }
         if (version < 6) {
           state.objective = state.objective ?? "wsjf";
+          state.schedule = null;
+          state.prevSchedule = null;
+        }
+        if (version < 7) {
+          const squads = (state.squads as Record<string, unknown>[]) ?? [];
+          state.squads = squads.map((s) => ({
+            ...s,
+            members: ((s as { members?: Record<string, unknown>[] }).members ?? []).map((m) => ({
+              ...m,
+              skill: (m.skill as number) ?? 1,
+            })),
+          }));
           state.schedule = null;
           state.prevSchedule = null;
         }

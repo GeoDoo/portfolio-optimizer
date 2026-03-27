@@ -18,8 +18,8 @@ function makeSquad(
 ): Squad {
   const id = uid();
   const members = [
-    ...fe.map((alloc) => ({ id: uid(), role: "fe" as const, allocation: alloc })),
-    ...be.map((alloc) => ({ id: uid(), role: "be" as const, allocation: alloc })),
+    ...fe.map((alloc) => ({ id: uid(), role: "fe" as const, allocation: alloc, skill: 1 })),
+    ...be.map((alloc) => ({ id: uid(), role: "be" as const, allocation: alloc, skill: 1 })),
   ];
   return { id, name, members };
 }

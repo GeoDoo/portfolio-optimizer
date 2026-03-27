@@ -82,13 +82,13 @@ function buildChainPriority(projects: Project[], objective: Objective): Map<stri
 export function effectiveFe(s: Squad): number {
   return s.members
     .filter((m) => m.role === "fe")
-    .reduce((sum, m) => sum + m.allocation / 100, 0);
+    .reduce((sum, m) => sum + (m.allocation / 100) * (m.skill ?? 1), 0);
 }
 
 export function effectiveBe(s: Squad): number {
   return s.members
     .filter((m) => m.role === "be")
-    .reduce((sum, m) => sum + m.allocation / 100, 0);
+    .reduce((sum, m) => sum + (m.allocation / 100) * (m.skill ?? 1), 0);
 }
 
 function fmt(n: number): string {

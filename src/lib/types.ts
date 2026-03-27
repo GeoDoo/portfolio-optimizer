@@ -6,6 +6,7 @@ export type Member = {
   id: string;
   role: Role;
   allocation: number;
+  skill: number; // 0–1 efficiency factor, default 1.0
 };
 
 export type Squad = {

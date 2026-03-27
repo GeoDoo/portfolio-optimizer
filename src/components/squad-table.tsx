@@ -31,6 +31,7 @@ export function SquadTable() {
       id: crypto.randomUUID(),
       role,
       allocation: 100,
+      skill: 1,
     });
   };
 

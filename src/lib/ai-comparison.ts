@@ -23,8 +23,8 @@ function buildFullStackSquads(squads: Squad[]): Squad[] {
       name: s.name,
       members: [
         ...pms,
-        { id: `${s.id}-fs-fe`, role: "fe" as const, allocation: totalCapacity },
-        { id: `${s.id}-fs-be`, role: "be" as const, allocation: totalCapacity },
+        { id: `${s.id}-fs-fe`, role: "fe" as const, allocation: totalCapacity, skill: 1 },
+        { id: `${s.id}-fs-be`, role: "be" as const, allocation: totalCapacity, skill: 1 },
       ],
     };
   });
@@ -39,9 +39,9 @@ function buildMiniSquads(squads: Squad[], multiplier: number): Squad[] {
     id: s.id,
     name: s.name,
     members: [
-      { id: `${s.id}-ai-pm`, role: "pm" as const, allocation: 100 },
-      { id: `${s.id}-ai-fe`, role: "fe" as const, allocation: Math.round(multiplier * 100) },
-      { id: `${s.id}-ai-be`, role: "be" as const, allocation: Math.round(multiplier * 100) },
+      { id: `${s.id}-ai-pm`, role: "pm" as const, allocation: 100, skill: 1 },
+      { id: `${s.id}-ai-fe`, role: "fe" as const, allocation: Math.round(multiplier * 100), skill: 1 },
+      { id: `${s.id}-ai-be`, role: "be" as const, allocation: Math.round(multiplier * 100), skill: 1 },
     ],
   }));
 }

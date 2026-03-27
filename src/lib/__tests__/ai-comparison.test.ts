@@ -5,11 +5,11 @@ import { Squad, Project } from "../types";
 function makeSquad(id: string, fe: number, be: number, pm = 1): Squad {
   const members = [];
   for (let i = 0; i < pm; i++)
-    members.push({ id: `${id}-pm-${i}`, role: "pm" as const, allocation: 100 });
+    members.push({ id: `${id}-pm-${i}`, role: "pm" as const, allocation: 100, skill: 1 });
   for (let i = 0; i < fe; i++)
-    members.push({ id: `${id}-fe-${i}`, role: "fe" as const, allocation: 100 });
+    members.push({ id: `${id}-fe-${i}`, role: "fe" as const, allocation: 100, skill: 1 });
   for (let i = 0; i < be; i++)
-    members.push({ id: `${id}-be-${i}`, role: "be" as const, allocation: 100 });
+    members.push({ id: `${id}-be-${i}`, role: "be" as const, allocation: 100, skill: 1 });
   return { id, name: `Squad ${id}`, members };
 }
 
