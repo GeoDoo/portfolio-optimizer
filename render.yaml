@@ -2,6 +2,9 @@ services:
   - type: web
     name: portfolio-optimizer
     runtime: node
+    repo: https://github.com/GeoDoc/portfolio-optimizer
+    branch: main
+    autoDeploy: yes
     buildCommand: npm install && npm run build
     startCommand: npx next start -p $PORT
     envVars:

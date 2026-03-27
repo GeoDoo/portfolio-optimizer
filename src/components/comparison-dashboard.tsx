@@ -217,7 +217,7 @@ export function ComparisonDashboard({
     );
 
     return lines;
-  }, [comparison, trad, cycleOverheadPct, cycleLengthWeeks]);
+  }, [comparison, trad, cycleOverheadPct]);
 
   const numSquads = comparison.traditional.headcount > 0
     ? Math.round(comparison.miniSquad.headcount / 2)
