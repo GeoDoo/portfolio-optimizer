@@ -17,14 +17,14 @@ function buildFullStackSquads(squads: Squad[]): Squad[] {
   return squads.map((s) => {
     const pms = s.members.filter((m) => m.role === "pm");
     const engineers = s.members.filter((m) => m.role !== "pm");
-    const totalCapacity = engineers.reduce((sum, m) => sum + m.allocation, 0);
+    const totalEffective = engineers.reduce((sum, m) => sum + m.allocation * (m.skill ?? 1), 0);
     return {
       id: s.id,
       name: s.name,
       members: [
         ...pms,
-        { id: `${s.id}-fs-fe`, role: "fe" as const, allocation: totalCapacity, skill: 1 },
-        { id: `${s.id}-fs-be`, role: "be" as const, allocation: totalCapacity, skill: 1 },
+        { id: `${s.id}-fs-fe`, role: "fe" as const, allocation: totalEffective, skill: 1 },
+        { id: `${s.id}-fs-be`, role: "be" as const, allocation: totalEffective, skill: 1 },
       ],
     };
   });

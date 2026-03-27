@@ -18,14 +18,16 @@ export function analyzeProjects(
   projects: Project[],
   squads: Squad[],
   horizonMonths: number,
+  aiEffect: number = 0,
 ): Alert[] {
-  return projects.map((p) => analyzeOne(p, squads, horizonMonths));
+  return projects.map((p) => analyzeOne(p, squads, horizonMonths, aiEffect));
 }
 
 function analyzeOne(
   p: Project,
   squads: Squad[],
   horizonMonths: number,
+  aiEffect: number = 0,
 ): Alert {
   if (p.feNeeded === 0 && p.beNeeded === 0) {
     return { projectId: p.id, level: "ok", message: "No effort needed" };
@@ -44,9 +46,9 @@ function analyzeOne(
     return { projectId: p.id, level: "error", message: "No squad assigned" };
   }
 
-  // Check structural fit on assigned squad
-  const aFe = effectiveFe(assigned);
-  const aBe = effectiveBe(assigned);
+  const mul = 1 + aiEffect;
+  const aFe = effectiveFe(assigned) * mul;
+  const aBe = effectiveBe(assigned) * mul;
   const fitsAssigned = p.feNeeded <= aFe && p.beNeeded <= aBe;
 
   if (fitsAssigned) {
@@ -57,11 +59,10 @@ function analyzeOne(
     };
   }
 
-  // Check other squads
   for (const s of squads) {
     if (s.id === p.squadId) continue;
-    const sFe = effectiveFe(s);
-    const sBe = effectiveBe(s);
+    const sFe = effectiveFe(s) * mul;
+    const sBe = effectiveBe(s) * mul;
     if (p.feNeeded <= sFe && p.beNeeded <= sBe) {
       return {
         projectId: p.id,
@@ -71,12 +72,11 @@ function analyzeOne(
     }
   }
 
-  // Doesn't fit anywhere
   const needs: string[] = [];
   if (p.feNeeded > 0) needs.push(`${p.feNeeded}FE`);
   if (p.beNeeded > 0) needs.push(`${p.beNeeded}BE`);
-  const maxFe = Math.max(...squads.map(effectiveFe), 0);
-  const maxBe = Math.max(...squads.map(effectiveBe), 0);
+  const maxFe = Math.max(...squads.map((s) => effectiveFe(s) * mul), 0);
+  const maxBe = Math.max(...squads.map((s) => effectiveBe(s) * mul), 0);
   return {
     projectId: p.id,
     level: "error",

@@ -58,8 +58,8 @@ export default function Home() {
 
   const alerts = useMemo(() => {
     if (!hydrated || squads.length === 0) return [];
-    return analyzeProjects(projects, squads, horizonMonths);
-  }, [hydrated, projects, squads, horizonMonths]);
+    return analyzeProjects(projects, squads, horizonMonths, aiEffect);
+  }, [hydrated, projects, squads, horizonMonths, aiEffect]);
 
   const hasData = squads.length > 0 && projects.length > 0;
   const displaySchedule = schedule ?? (hasData ? prevSchedule : null);
@@ -105,8 +105,9 @@ export default function Home() {
     }
   }, [updateMember, updateProject]);
 
-  const totalFeCap = squads.reduce((sum, s) => sum + effectiveFe(s), 0) * horizonMonths;
-  const totalBeCap = squads.reduce((sum, s) => sum + effectiveBe(s), 0) * horizonMonths;
+  const aiMul = 1 + aiEffect;
+  const totalFeCap = squads.reduce((sum, s) => sum + effectiveFe(s), 0) * aiMul * horizonMonths;
+  const totalBeCap = squads.reduce((sum, s) => sum + effectiveBe(s), 0) * aiMul * horizonMonths;
   const totalCap = totalFeCap + totalBeCap;
   const totalFeDemand = projects.reduce((sum, p) => sum + p.duration * p.feNeeded, 0);
   const totalBeDemand = projects.reduce((sum, p) => sum + p.duration * p.beNeeded, 0);

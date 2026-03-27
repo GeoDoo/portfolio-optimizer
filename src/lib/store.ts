@@ -152,7 +152,7 @@ export const useStore = create<Store>()(
       duplicateScenario: (id) =>
         set((s) => {
           const src = s.scenarios.find((sc) => sc.id === id);
-          if (!src) return s;
+          if (!src) return {};
           const clone: Scenario = {
             ...structuredClone(src),
             id: crypto.randomUUID(),
