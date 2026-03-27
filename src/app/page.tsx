@@ -5,11 +5,13 @@ import { useStore } from "@/lib/store";
 import { optimize, effectiveFe, effectiveBe } from "@/lib/optimizer";
 import { analyzeProjects, generateRecommendations, computeDiff, computeOptimalPlan } from "@/lib/alerts";
 import { SEED_SQUADS, SEED_PROJECTS } from "@/lib/seed";
-import { RecommendationAction, OptimalPlan } from "@/lib/types";
+import { RecommendationAction, OptimalPlan, ComparisonResult } from "@/lib/types";
+import { runComparison } from "@/lib/ai-comparison";
 import { SquadTable } from "@/components/squad-table";
 import { ProjectTable } from "@/components/project-table";
 import { GanttChart } from "@/components/gantt-chart";
 import { RecommendationsPanel } from "@/components/recommendations";
+import { ComparisonDashboard } from "@/components/comparison-dashboard";
 import { Button } from "@/components/ui/button";
 
 const MONTH_NAMES = [
@@ -28,16 +30,18 @@ export default function Home() {
   const {
     squads, projects, schedule, prevSchedule,
     horizonMonths, horizonStartMonth, horizonStartYear,
-    setSchedule, setHorizonMonths, setHorizonStart, loadData,
-    updateMember, updateProject, addProject,
+    cycleLengthWeeks, cycleOverheadPct,
+    setSchedule, setHorizonMonths, setHorizonStart,
+    setCycleLengthWeeks, setCycleOverheadPct,
+    loadData, updateMember, updateProject, addProject,
   } = useStore();
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const runOptimize = useCallback(() => {
     if (squads.length === 0 || projects.length === 0) return;
-    const result = optimize(projects, squads, horizonMonths);
+    const result = optimize(projects, squads, horizonMonths, cycleOverheadPct);
     setSchedule(result);
-  }, [projects, squads, horizonMonths, setSchedule]);
+  }, [projects, squads, horizonMonths, cycleOverheadPct, setSchedule]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -49,7 +53,7 @@ export default function Home() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [hydrated, schedule, squads, projects, horizonMonths, runOptimize]);
+  }, [hydrated, schedule, squads, projects, horizonMonths, cycleOverheadPct, runOptimize]);
 
   const alerts = useMemo(() => {
     if (!hydrated || squads.length === 0) return [];
@@ -79,6 +83,13 @@ export default function Home() {
     [projects],
   );
 
+  const [activeView, setActiveView] = useState<"schedule" | "comparison">("schedule");
+
+  const comparison = useMemo<ComparisonResult | null>(() => {
+    if (!hasData || !displaySchedule) return null;
+    return runComparison(squads, projects, horizonMonths, cycleOverheadPct);
+  }, [hasData, displaySchedule, squads, projects, horizonMonths, cycleOverheadPct]);
+
   const applyRecommendation = useCallback((action: RecommendationAction) => {
     switch (action.type) {
       case "flip-role":
@@ -93,8 +104,8 @@ export default function Home() {
     }
   }, [updateMember, updateProject]);
 
-  const totalFeCap = squads.reduce((sum, s) => sum + effectiveFe(s), 0) * horizonMonths;
-  const totalBeCap = squads.reduce((sum, s) => sum + effectiveBe(s), 0) * horizonMonths;
+  const totalFeCap = squads.reduce((sum, s) => sum + effectiveFe(s, cycleOverheadPct), 0) * horizonMonths;
+  const totalBeCap = squads.reduce((sum, s) => sum + effectiveBe(s, cycleOverheadPct), 0) * horizonMonths;
   const totalCap = totalFeCap + totalBeCap;
   const totalFeDemand = projects.reduce((sum, p) => sum + p.duration * p.feNeeded, 0);
   const totalBeDemand = projects.reduce((sum, p) => sum + p.duration * p.beNeeded, 0);
@@ -176,6 +187,27 @@ export default function Home() {
             type="number" min={1} max={24} value={horizonMonths}
             onChange={(e) => setHorizonMonths(parseInt(e.target.value) || 6)}
             className="flex h-8 w-16 rounded-md border border-input bg-background px-2.5 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
+        <div className="w-px h-8 bg-border" />
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Cycle (weeks)
+          </label>
+          <input
+            type="number" min={1} max={4} value={cycleLengthWeeks}
+            onChange={(e) => setCycleLengthWeeks(Math.max(1, Math.min(4, parseInt(e.target.value) || 1)))}
+            className="flex h-8 w-14 rounded-md border border-input bg-background px-2.5 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Overhead %
+          </label>
+          <input
+            type="number" min={0} max={50} value={cycleOverheadPct}
+            onChange={(e) => setCycleOverheadPct(Math.max(0, Math.min(50, parseInt(e.target.value) || 0)))}
+            className="flex h-8 w-14 rounded-md border border-input bg-background px-2.5 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
 
@@ -314,8 +346,50 @@ export default function Home() {
         onApplyPlan={(plan) => plan.actions.forEach(applyRecommendation)}
       />
 
-      {/* Gantt chart */}
-      <GanttChart />
+      {/* View toggle */}
+      {hasData && displaySchedule && (
+        <div className="flex items-center gap-1 border rounded-lg p-1 w-fit">
+          <button
+            onClick={() => setActiveView("schedule")}
+            className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
+              activeView === "schedule"
+                ? "bg-foreground text-background"
+                : "hover:bg-muted text-muted-foreground"
+            }`}
+          >
+            Schedule
+          </button>
+          <button
+            onClick={() => setActiveView("comparison")}
+            className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
+              activeView === "comparison"
+                ? "bg-violet-600 text-white"
+                : "hover:bg-muted text-muted-foreground"
+            }`}
+          >
+            AI Comparison
+            <span className="ml-1.5 text-[0.6rem] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
+              Experimental
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Schedule view */}
+      {activeView === "schedule" && (
+        <GanttChart />
+      )}
+
+      {/* AI Comparison view */}
+      {activeView === "comparison" && comparison && (
+        <ComparisonDashboard
+          comparison={comparison}
+          projects={projects}
+          horizonMonths={horizonMonths}
+          cycleLengthWeeks={cycleLengthWeeks}
+          cycleOverheadPct={cycleOverheadPct}
+        />
+      )}
     </main>
   );
 }
