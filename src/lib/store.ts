@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Squad, Member, Project, ScheduleResult } from "./types";
+import { Squad, Member, Project, ScheduleResult, Objective } from "./types";
 
 type Store = {
   squads: Squad[];
@@ -12,6 +12,7 @@ type Store = {
   horizonStartYear: number;
   cycleLengthWeeks: number;
   cycleOverheadPct: number;
+  objective: Objective;
 
   addSquad: (squad: Squad) => void;
   updateSquad: (id: string, data: Partial<Omit<Squad, "members">>) => void;
@@ -27,6 +28,7 @@ type Store = {
   setHorizonStart: (month: number, year: number) => void;
   setCycleLengthWeeks: (n: number) => void;
   setCycleOverheadPct: (n: number) => void;
+  setObjective: (o: Objective) => void;
   loadData: (squads: Squad[], projects: Project[]) => void;
 };
 
@@ -46,6 +48,7 @@ export const useStore = create<Store>()(
       horizonStartYear: 2026,
       cycleLengthWeeks: 1,
       cycleOverheadPct: 12,
+      objective: "wsjf" as Objective,
 
       addSquad: (squad) =>
         set((s) => ({ squads: [...s.squads, squad], ...invalidate(s) })),
@@ -114,10 +117,12 @@ export const useStore = create<Store>()(
         set((s) => ({ cycleLengthWeeks, ...invalidate(s) })),
       setCycleOverheadPct: (cycleOverheadPct) =>
         set((s) => ({ cycleOverheadPct, ...invalidate(s) })),
+      setObjective: (objective) =>
+        set((s) => ({ objective, ...invalidate(s) })),
     }),
     {
       name: "portfolio-optimizer",
-      version: 5,
+      version: 6,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 3) {
@@ -151,6 +156,11 @@ export const useStore = create<Store>()(
         if (version < 5) {
           state.cycleLengthWeeks = state.cycleLengthWeeks ?? 1;
           state.cycleOverheadPct = state.cycleOverheadPct ?? 12;
+          state.schedule = null;
+          state.prevSchedule = null;
+        }
+        if (version < 6) {
+          state.objective = state.objective ?? "wsjf";
           state.schedule = null;
           state.prevSchedule = null;
         }
