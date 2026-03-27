@@ -1,4 +1,4 @@
-export type Role = "fe" | "be";
+export type Role = "fe" | "be" | "pm";
 
 export type Member = {
   id: string;
@@ -79,3 +79,22 @@ export type OptimalPlan = {
 };
 
 export type ZoomLevel = "year" | "month" | "week";
+
+export type ScenarioLabel = "conservative" | "moderate" | "aggressive";
+
+export type ComparisonMetrics = {
+  headcount: number;
+  scheduledCount: number;
+  deferredCount: number;
+  totalValueDelivered: number;
+  avgLeadTime: number;
+  utilizationPct: number;
+  lastDeliveryMonth: number;
+  entries: ScheduleEntry[];
+  deferred: DeferralReason[];
+};
+
+export type ComparisonResult = {
+  traditional: ComparisonMetrics;
+  scenarios: Record<ScenarioLabel, ComparisonMetrics & { multiplier: number }>;
+};

@@ -10,6 +10,8 @@ type Store = {
   horizonMonths: number;
   horizonStartMonth: number;
   horizonStartYear: number;
+  cycleLengthWeeks: number;
+  cycleOverheadPct: number;
 
   addSquad: (squad: Squad) => void;
   updateSquad: (id: string, data: Partial<Omit<Squad, "members">>) => void;
@@ -23,6 +25,8 @@ type Store = {
   setSchedule: (schedule: ScheduleResult) => void;
   setHorizonMonths: (n: number) => void;
   setHorizonStart: (month: number, year: number) => void;
+  setCycleLengthWeeks: (n: number) => void;
+  setCycleOverheadPct: (n: number) => void;
   loadData: (squads: Squad[], projects: Project[]) => void;
 };
 
@@ -40,6 +44,8 @@ export const useStore = create<Store>()(
       horizonMonths: 9,
       horizonStartMonth: 3,
       horizonStartYear: 2026,
+      cycleLengthWeeks: 1,
+      cycleOverheadPct: 12,
 
       addSquad: (squad) =>
         set((s) => ({ squads: [...s.squads, squad], ...invalidate(s) })),
@@ -104,10 +110,14 @@ export const useStore = create<Store>()(
         set((s) => ({ horizonMonths, ...invalidate(s) })),
       setHorizonStart: (horizonStartMonth, horizonStartYear) =>
         set((s) => ({ horizonStartMonth, horizonStartYear, ...invalidate(s) })),
+      setCycleLengthWeeks: (cycleLengthWeeks) =>
+        set((s) => ({ cycleLengthWeeks, ...invalidate(s) })),
+      setCycleOverheadPct: (cycleOverheadPct) =>
+        set((s) => ({ cycleOverheadPct, ...invalidate(s) })),
     }),
     {
       name: "portfolio-optimizer",
-      version: 4,
+      version: 5,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 3) {
@@ -135,6 +145,12 @@ export const useStore = create<Store>()(
             timeCriticality: p.timeCriticality ?? 5,
             riskReduction: p.riskReduction ?? 3,
           }));
+          state.schedule = null;
+          state.prevSchedule = null;
+        }
+        if (version < 5) {
+          state.cycleLengthWeeks = state.cycleLengthWeeks ?? 1;
+          state.cycleOverheadPct = state.cycleOverheadPct ?? 12;
           state.schedule = null;
           state.prevSchedule = null;
         }

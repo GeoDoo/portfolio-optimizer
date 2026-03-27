@@ -60,6 +60,7 @@ export function SquadTable() {
           const eBe = effectiveBe(s);
           const feCount = s.members.filter((m) => m.role === "fe").length;
           const beCount = s.members.filter((m) => m.role === "be").length;
+          const pmCount = s.members.filter((m) => m.role === "pm").length;
           const totalPmo = (eFe + eBe) * horizonMonths;
 
           return (
@@ -95,15 +96,16 @@ export function SquadTable() {
                         {idx + 1}
                       </span>
                       <button
-                        onClick={() =>
-                          updateMember(s.id, m.id, {
-                            role: m.role === "fe" ? "be" : "fe",
-                          })
-                        }
+                        onClick={() => {
+                          const next: Role = m.role === "fe" ? "be" : m.role === "be" ? "pm" : "fe";
+                          updateMember(s.id, m.id, { role: next });
+                        }}
                         className={`text-[0.65rem] font-bold px-1.5 py-0.5 rounded transition-colors ${
                           m.role === "fe"
                             ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                            : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                            : m.role === "be"
+                              ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                              : "bg-purple-100 text-purple-700 hover:bg-purple-200"
                         }`}
                       >
                         {m.role.toUpperCase()}
@@ -138,6 +140,14 @@ export function SquadTable() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="h-5 text-[0.65rem] px-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                  onClick={() => handleAddMember(s.id, "pm")}
+                >
+                  + PM
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="h-5 text-[0.65rem] px-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                   onClick={() => handleAddMember(s.id, "fe")}
                 >
@@ -152,7 +162,7 @@ export function SquadTable() {
                   + BE
                 </Button>
                 <span className="text-[0.65rem] text-muted-foreground ml-auto tabular-nums">
-                  {feCount}FE {beCount}BE
+                  {pmCount}PM {feCount}FE {beCount}BE
                 </span>
               </div>
             </div>

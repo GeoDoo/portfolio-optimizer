@@ -10,6 +10,7 @@ export const SEED_SQUADS: Squad[] = [
     id: s1,
     name: "Payments",
     members: [
+      { id: id(), role: "pm", allocation: 100 },
       { id: id(), role: "fe", allocation: 100 },
       { id: id(), role: "fe", allocation: 80 },
       { id: id(), role: "be", allocation: 100 },
@@ -20,6 +21,7 @@ export const SEED_SQUADS: Squad[] = [
     id: s2,
     name: "Growth",
     members: [
+      { id: id(), role: "pm", allocation: 100 },
       { id: id(), role: "fe", allocation: 100 },
       { id: id(), role: "fe", allocation: 60 },
       { id: id(), role: "be", allocation: 100 },
@@ -29,6 +31,7 @@ export const SEED_SQUADS: Squad[] = [
     id: s3,
     name: "Platform",
     members: [
+      { id: id(), role: "pm", allocation: 100 },
       { id: id(), role: "fe", allocation: 50 },
       { id: id(), role: "be", allocation: 100 },
       { id: id(), role: "be", allocation: 100 },
