@@ -1,4 +1,4 @@
-export type Role = "fe" | "be" | "pm" | "qe" | "sre" | "devops" | "design" | "data";
+export type Role = "fe" | "be" | "pm" | "qe" | "sre" | "design";
 
 export function isSchedulingRole(role: Role): boolean {
   return role === "fe" || role === "be";
@@ -8,11 +8,9 @@ export const ROLE_META: Record<Role, { label: string; color: string }> = {
   fe:     { label: "Frontend",  color: "blue"   },
   be:     { label: "Backend",   color: "amber"  },
   pm:     { label: "PM",        color: "purple" },
-  qe:     { label: "QA",        color: "teal"   },
+  qe:     { label: "QE",        color: "teal"   },
   sre:    { label: "SRE",       color: "orange" },
-  devops: { label: "DevOps",    color: "cyan"   },
   design: { label: "Design",    color: "pink"   },
-  data:   { label: "Data",      color: "indigo" },
 };
 
 export type Seniority = "junior" | "mid" | "senior" | "lead" | "principal";

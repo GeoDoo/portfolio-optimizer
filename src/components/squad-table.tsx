@@ -177,7 +177,7 @@ export function SquadTable() {
               {/* Add member buttons */}
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 border-t bg-muted/20">
                 <span className="text-[0.6rem] text-muted-foreground mr-1">Add:</span>
-                {(["pm", "fe", "be", "qe", "sre", "devops", "design", "data"] as Role[]).map((role) => {
+                {(["pm", "fe", "be", "qe", "sre", "design"] as Role[]).map((role) => {
                   const meta = ROLE_META[role];
                   const btnColor = ROLE_BADGE_COLORS[meta.color] || "";
                   return (
