@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import {
   ComparisonResult,
-  ComparisonMetrics,
   Project,
   ScheduleEntry,
 } from "@/lib/types";
@@ -14,37 +13,32 @@ const BAR_COLORS = [
   "bg-rose-400", "bg-cyan-400", "bg-orange-400", "bg-teal-400",
 ];
 
-type ScenarioKey = "traditional" | "noOverhead" | "sameTeamAI" | "miniSquad";
+type ScenarioKey = "traditional" | "sameTeamAI" | "miniSquad";
 
-const SCENARIO_META: { key: ScenarioKey; title: string; color: string; bg: string; description: string }[] = [
+const TABLE_SCENARIOS: { key: ScenarioKey; title: string; color: string; description: string }[] = [
   {
     key: "traditional",
     title: "Traditional",
     color: "text-slate-700",
-    bg: "bg-slate-50 border-slate-200",
-    description: "FE/BE split + cycle overhead",
-  },
-  {
-    key: "noOverhead",
-    title: "No overhead",
-    color: "text-blue-700",
-    bg: "bg-blue-50 border-blue-200",
-    description: "Same team, 0% ceremony",
+    description: "FE/BE specialised roles",
   },
   {
     key: "sameTeamAI",
     title: "Full-stack AI",
     color: "text-emerald-700",
-    bg: "bg-emerald-50 border-emerald-200",
-    description: "Same headcount, full-stack + 0% overhead",
+    description: "Same headcount, full-stack",
   },
   {
     key: "miniSquad",
     title: "Mini squad",
     color: "text-violet-700",
-    bg: "bg-violet-50 border-violet-200",
-    description: "1 Eng + 1 PM per squad (1x)",
+    description: "1 Eng + 1 PM per squad",
   },
+];
+
+const GANTT_SCENARIOS: { key: ScenarioKey; title: string; bg: string; color: string }[] = [
+  { key: "sameTeamAI", title: "Full-stack AI", bg: "bg-emerald-50 border-emerald-200", color: "text-emerald-700" },
+  { key: "miniSquad", title: "Mini squad", bg: "bg-violet-50 border-violet-200", color: "text-violet-700" },
 ];
 
 function fmt(n: number, decimals = 1): string {
@@ -197,39 +191,33 @@ export function ComparisonDashboard({
   const insights = useMemo(() => {
     const lines: string[] = [];
 
-    if (comparison.overheadGainPct > 0.5) {
+    if (cycleOverheadPct > 0) {
       lines.push(
-        `Removing ${cycleOverheadPct}% ceremony overhead alone recovers ${fmt(comparison.overheadGainPct)}% more delivered value.`,
+        `Your ${cycleLengthWeeks}-week cycles lose ~${fmt(comparison.overheadGainPct)}% of productive capacity to ceremony (planning, retros, demos). Daily AI cycles eliminate this.`,
       );
     }
 
     if (comparison.flexibilityGainPct > 0.5) {
-      lines.push(
-        `Switching to full-stack engineers adds another ${fmt(comparison.flexibilityGainPct)}% by eliminating FE/BE bottlenecks.`,
-      );
-    }
-
-    if (comparison.totalGainPct > 0.5) {
       const extra = comparison.sameTeamAI.scheduledCount - trad.scheduledCount;
       lines.push(
-        `Combined: the same ${trad.headcount} people deliver ${fmt(comparison.totalGainPct)}% more value` +
+        `Switching to full-stack engineers delivers ${fmt(comparison.flexibilityGainPct)}% more value` +
         (extra > 0 ? ` and ${extra} more project${extra > 1 ? "s" : ""}` : "") +
-        ` — with zero additional headcount.`,
+        ` by eliminating FE/BE bottlenecks — same ${trad.headcount} people, zero additional headcount.`,
       );
     } else {
       lines.push(
-        `Your current setup already captures most of the structural efficiency. Full-stack and overhead elimination yield minimal additional gains with this project mix.`,
+        `Your current FE/BE mix already handles this project portfolio well. Full-stack flexibility yields minimal additional scheduling gains with this workload.`,
       );
     }
 
     const beMult = comparison.breakEvenMultiplier;
     const miniHc = comparison.miniSquad.headcount;
     lines.push(
-      `To match traditional output with mini squads (${miniHc} people vs ${trad.headcount}), each AI engineer needs to be at least ${fmt(beMult)}x as productive.`,
+      `To match traditional output with AI mini squads (${miniHc} people vs ${trad.headcount}), each AI-assisted engineer needs to be at least ${fmt(beMult)}x as productive.`,
     );
 
     return lines;
-  }, [comparison, trad, cycleOverheadPct]);
+  }, [comparison, trad, cycleOverheadPct, cycleLengthWeeks]);
 
   return (
     <div className="space-y-5">
@@ -247,13 +235,13 @@ export function ComparisonDashboard({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 border rounded-lg bg-blue-50/40 border-blue-200/50">
           <div className="text-[0.65rem] font-medium uppercase tracking-wider text-blue-600 mb-1">
-            Overhead elimination
+            Ceremony overhead cost
           </div>
           <div className="text-2xl font-bold text-blue-700 tabular-nums">
-            +{fmt(comparison.overheadGainPct)}%
+            {fmt(comparison.overheadGainPct)}%
           </div>
           <div className="text-[0.65rem] text-blue-600/70 mt-1">
-            value recovered by removing {cycleOverheadPct}% ceremony
+            of productive time lost to {cycleOverheadPct}% cycle ceremony
           </div>
         </div>
         <div className="p-4 border rounded-lg bg-emerald-50/40 border-emerald-200/50">
@@ -286,7 +274,7 @@ export function ComparisonDashboard({
           <thead>
             <tr className="bg-muted/40">
               <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Metric</th>
-              {SCENARIO_META.map((s) => (
+              {TABLE_SCENARIOS.map((s) => (
                 <th key={s.key} className={`text-center px-3 py-2 font-semibold ${s.color}`}>
                   <div>{s.title}</div>
                   <div className="font-normal text-[0.55rem] text-muted-foreground/60">{s.description}</div>
@@ -297,7 +285,7 @@ export function ComparisonDashboard({
           <tbody className="divide-y">
             {([
               { label: "Headcount", key: "headcount" as const, lower: true, unit: "" },
-              { label: "Eng FTE (effective)", key: "engineeringFte" as const, lower: false, unit: "" },
+              { label: "Eng FTE", key: "engineeringFte" as const, lower: false, unit: "" },
               { label: "Projects delivered", key: "scheduledCount" as const, lower: false, unit: "" },
               { label: "Deferred", key: "deferredCount" as const, lower: true, unit: "" },
               { label: "Value delivered", key: "totalValueDelivered" as const, lower: false, unit: " pts" },
@@ -310,7 +298,7 @@ export function ComparisonDashboard({
               return (
                 <tr key={row.key} className="hover:bg-muted/20">
                   <td className="px-3 py-2 font-medium">{row.label}</td>
-                  {SCENARIO_META.map((s) => {
+                  {TABLE_SCENARIOS.map((s) => {
                     const val = comparison[s.key][row.key] as number;
                     const change = pctChange(tradVal, val);
                     const better = row.lower ? change < 0 : change > 0;
@@ -338,7 +326,7 @@ export function ComparisonDashboard({
       <div>
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs text-muted-foreground">Compare schedules:</span>
-          {SCENARIO_META.filter((s) => s.key !== "traditional").map((s) => (
+          {GANTT_SCENARIOS.map((s) => (
             <button
               key={s.key}
               onClick={() => setGanttView(s.key)}

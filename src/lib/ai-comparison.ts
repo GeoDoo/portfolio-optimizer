@@ -8,9 +8,9 @@ import {
 import { optimize, effectiveFe, effectiveBe } from "./optimizer";
 
 /**
- * Same team composition but everyone becomes full-stack. Each engineer's
- * capacity is applied to BOTH FE and BE pools (they can flex to whatever
- * the project needs). PMs stay as PMs.
+ * Same team composition but every engineer becomes full-stack.
+ * All engineering capacity flows to BOTH FE and BE pools.
+ * PMs stay as PMs. Headcount is unchanged.
  */
 function buildFullStackSquads(squads: Squad[]): Squad[] {
   return squads.map((s) => {
@@ -45,14 +45,17 @@ function buildMiniSquads(squads: Squad[], multiplier: number): Squad[] {
   }));
 }
 
-function engineeringFte(squads: Squad[], overheadPct: number): number {
-  const factor = 1 - overheadPct / 100;
+function countHeadcount(squads: Squad[]): number {
+  return squads.reduce((sum, s) => sum + s.members.length, 0);
+}
+
+function countEngFte(squads: Squad[]): number {
   return squads.reduce(
     (sum, s) =>
       sum +
       s.members
         .filter((m) => m.role !== "pm")
-        .reduce((ms, m) => ms + (m.allocation / 100) * factor, 0),
+        .reduce((ms, m) => ms + m.allocation / 100, 0),
     0,
   );
 }
@@ -71,13 +74,13 @@ function score(result: ScheduleResult, projects: Project[]): number {
 
 function collectMetrics(
   label: string,
-  squads: Squad[],
-  projects: Project[],
   schedule: ScheduleResult,
-  overheadPct: number,
+  projects: Project[],
+  headcount: number,
+  engFte: number,
+  horizonMonths: number,
+  squads: Squad[],
 ): ComparisonMetrics {
-  const headcount = squads.reduce((sum, s) => sum + s.members.length, 0);
-  const engFte = engineeringFte(squads, overheadPct);
   const projectMap = new Map(projects.map((p) => [p.id, p]));
 
   let totalValue = 0;
@@ -93,10 +96,9 @@ function collectMetrics(
     if (e.endMonth > lastMonth) lastMonth = e.endMonth;
   }
 
-  const feCap = squads.reduce((s, sq) => s + effectiveFe(sq, overheadPct), 0);
-  const beCap = squads.reduce((s, sq) => s + effectiveBe(sq, overheadPct), 0);
-  const horizonForUtil = lastMonth || 1;
-  const totalCap = (feCap + beCap) * horizonForUtil;
+  const feCap = squads.reduce((s, sq) => s + effectiveFe(sq), 0);
+  const beCap = squads.reduce((s, sq) => s + effectiveBe(sq), 0);
+  const totalCap = (feCap + beCap) * horizonMonths;
   const usedCap = schedule.entries.reduce((s, e) => {
     const p = projectMap.get(e.projectId);
     return s + (p ? (p.feNeeded + p.beNeeded) * (e.endMonth - e.startMonth) : 0);
@@ -133,7 +135,7 @@ function findBreakEvenMultiplier(
   for (let i = 0; i < 25; i++) {
     const mid = (lo + hi) / 2;
     const miniSquads = buildMiniSquads(squads, mid);
-    const result = optimize(projects, miniSquads, horizonMonths, 0);
+    const result = optimize(projects, miniSquads, horizonMonths);
     if (score(result, projects) >= traditionalScore) {
       hi = mid;
     } else {
@@ -150,52 +152,64 @@ export function runComparison(
   horizonMonths: number,
   cycleOverheadPct: number,
 ): ComparisonResult {
-  // 1. Traditional: current setup with FE/BE constraints + overhead
-  const tradSchedule = optimize(projects, squads, horizonMonths, cycleOverheadPct);
+  const tradHeadcount = countHeadcount(squads);
+  const tradEngFte = countEngFte(squads);
+
+  // 1. Traditional: current setup with FE/BE role constraints, 0% overhead
+  //    (overhead is modeled theoretically, not via the scheduler — integer
+  //    requirements can't be reduced by fractional overhead without breaking)
+  const tradSchedule = optimize(projects, squads, horizonMonths);
   const traditional = collectMetrics(
-    "Traditional", squads, projects, tradSchedule, cycleOverheadPct,
+    "Traditional", tradSchedule, projects, tradHeadcount, tradEngFte, horizonMonths, squads,
   );
 
-  // 2. No overhead: same FE/BE split, but 0% overhead — isolates overhead cost
-  const noOverheadSchedule = optimize(projects, squads, horizonMonths, 0);
-  const noOverhead = collectMetrics(
-    "No overhead", squads, projects, noOverheadSchedule, 0,
-  );
-
-  // 3. Same team, AI-enabled: same headcount, full-stack + 0% overhead
+  // 2. Same team, AI-enabled: same headcount, full-stack + 0% overhead
   const fsSquads = buildFullStackSquads(squads);
-  const fsSchedule = optimize(projects, fsSquads, horizonMonths, 0);
+  const fsSchedule = optimize(projects, fsSquads, horizonMonths);
   const sameTeamAI = collectMetrics(
-    "Same team, AI-enabled", fsSquads, projects, fsSchedule, 0,
+    "Same team, AI-enabled", fsSchedule, projects,
+    tradHeadcount, tradEngFte, horizonMonths, fsSquads,
   );
 
-  // 4. Mini squad: 1 eng + 1 PM per squad, at 1x — shows baseline mini squad output
+  // 3. Mini squad: 1 eng + 1 PM per squad, at 1x baseline
   const miniSquads = buildMiniSquads(squads, 1);
-  const miniSchedule = optimize(projects, miniSquads, horizonMonths, 0);
+  const miniHeadcount = squads.length * 2;
+  const miniEngFte = squads.length * 1;
+  const miniSchedule = optimize(projects, miniSquads, horizonMonths);
   const miniSquad = collectMetrics(
-    "AI mini squad (1x)", miniSquads, projects, miniSchedule, 0,
+    "AI mini squad (1x)", miniSchedule, projects,
+    miniHeadcount, miniEngFte, horizonMonths, miniSquads,
   );
 
   // Derived insights
+
+  // Overhead gain: if you lose X% to ceremony, recovering it gives
+  // X/(100-X) * 100 percent more productive capacity
+  const overheadGainPct = cycleOverheadPct > 0
+    ? (cycleOverheadPct / (100 - cycleOverheadPct)) * 100
+    : 0;
+
+  // Flexibility gain: difference between traditional (FE/BE constrained)
+  // and full-stack (unconstrained), both at 0% overhead
   const tradValue = traditional.totalValueDelivered || 1;
-  const overheadGainPct =
-    tradValue > 0
-      ? ((noOverhead.totalValueDelivered - traditional.totalValueDelivered) / tradValue) * 100
-      : 0;
-
   const flexibilityGainPct =
-    tradValue > 0
-      ? ((sameTeamAI.totalValueDelivered - noOverhead.totalValueDelivered) / tradValue) * 100
-      : 0;
+    ((sameTeamAI.totalValueDelivered - traditional.totalValueDelivered) / tradValue) * 100;
 
-  const totalGainPct =
-    tradValue > 0
-      ? ((sameTeamAI.totalValueDelivered - traditional.totalValueDelivered) / tradValue) * 100
-      : 0;
+  // Total gain combines overhead recovery + flexibility
+  const totalGainPct = overheadGainPct + flexibilityGainPct;
 
+  // Break-even: what multiplier does a mini squad (1 eng) need to match traditional?
   const breakEvenMultiplier = findBreakEvenMultiplier(
     squads, projects, horizonMonths, score(tradSchedule, projects),
   );
+
+  // Build a "no overhead" metrics for display (same schedule as traditional,
+  // but shows what the effective capacity WOULD be with full productive time)
+  const noOverhead = {
+    ...traditional,
+    label: "No overhead",
+    engineeringFte: tradEngFte,
+  };
 
   return {
     traditional,
