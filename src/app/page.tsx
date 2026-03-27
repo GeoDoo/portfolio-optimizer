@@ -297,6 +297,8 @@ export default function Home() {
         if (!hasSpare && !isOvercommitted) return null;
 
         if (hasSpare && displaySchedule.deferred.length === 0) {
+          if (utilPct >= 80) return null;
+
           return (
             <div className="flex items-center gap-3 p-3 border rounded-lg bg-blue-50/50 border-blue-200/60">
               <div className="flex-1 min-w-0">
