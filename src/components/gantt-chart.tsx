@@ -8,16 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 const BAR_COLORS = [
-  "bg-blue-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-violet-500",
-  "bg-rose-500",
-  "bg-cyan-500",
-  "bg-orange-500",
-  "bg-teal-500",
-  "bg-pink-500",
-  "bg-indigo-500",
+  "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500",
+  "bg-rose-500", "bg-cyan-500", "bg-orange-500", "bg-teal-500",
+  "bg-pink-500", "bg-indigo-500",
 ];
 
 const MONTH_LABELS = [
@@ -37,14 +30,6 @@ function weeksInMonth(month: number, year: number): number {
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
   return Math.ceil((last.getDate() + first.getDay()) / 7);
-}
-
-function fmt(n: number): string {
-  return n % 1 === 0 ? String(n) : n.toFixed(1);
-}
-
-function pct(n: number): string {
-  return `${Math.round(n)}%`;
 }
 
 function utilColor(u: number): string {
@@ -107,13 +92,10 @@ export function GanttChart() {
   const [focusWeek, setFocusWeek] = useState(0);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [barPositions, setBarPositions] = useState(() => new Map<string, BarPos>());
-  const [measuredGridHeight, setMeasuredGridHeight] = useState(0);
   const gridBodyRef = useRef<HTMLDivElement>(null);
 
   const scheduleEntries = displaySchedule?.entries ?? [];
   const scheduleDeferred = displaySchedule?.deferred ?? [];
-
-  // --- All hooks must be above the early return ---
 
   const projectMap = useMemo(
     () => new Map(projects.map((p) => [p.id, p])),
@@ -188,29 +170,16 @@ export function GanttChart() {
     return { left: "0%", width: "100%" };
   }, [zoom, colCount]);
 
-  const computeSquadStats = useCallback((squadId: string) => {
+  const computeSquadUtil = useCallback((squadId: string) => {
     const squad = squads.find((s) => s.id === squadId)!;
-    const eFe = effectiveFe(squad);
-    const eBe = effectiveBe(squad);
-    const totalCap = (eFe + eBe) * horizonMonths;
+    const totalCap = (effectiveFe(squad) + effectiveBe(squad)) * horizonMonths;
     const se = scheduleEntries.filter((e) => e.squadId === squadId);
-
-    let feUsed = 0, beUsed = 0, lastEnd = 0;
+    let used = 0;
     for (const e of se) {
       const p = projectMap.get(e.projectId);
-      if (!p) continue;
-      feUsed += p.feNeeded * p.duration;
-      beUsed += p.beNeeded * p.duration;
-      lastEnd = Math.max(lastEnd, e.endMonth);
+      if (p) used += (p.feNeeded + p.beNeeded) * p.duration;
     }
-
-    const totalUsed = feUsed + beUsed;
-    return {
-      utilization: totalCap > 0 ? (totalUsed / totalCap) * 100 : 0,
-      idleMonths: horizonMonths - lastEnd,
-      feIdle: eFe * horizonMonths - feUsed,
-      beIdle: eBe * horizonMonths - beUsed,
-    };
+    return totalCap > 0 ? (used / totalCap) * 100 : 0;
   }, [squads, scheduleEntries, horizonMonths, projectMap]);
 
   const squadRowData = useMemo(() => {
@@ -220,11 +189,10 @@ export function GanttChart() {
       );
       const lanes = computeLanes(sqEntries, projectMap);
       const height = Math.max(1, lanes.length) * LANE_H;
-      const stats = computeSquadStats(squad.id);
-      const lastEnd = sqEntries.reduce((max, e) => Math.max(max, e.endMonth), 0);
-      return { squad, entries: sqEntries, lanes, height, stats, lastEnd };
+      const util = computeSquadUtil(squad.id);
+      return { squad, entries: sqEntries, lanes, height, util };
     });
-  }, [sortedSquads, scheduleEntries, isActiveInPeriod, projectMap, computeSquadStats]);
+  }, [sortedSquads, scheduleEntries, isActiveInPeriod, projectMap, computeSquadUtil]);
 
   const measureBarPositions = useCallback(() => {
     const container = gridBodyRef.current;
@@ -232,7 +200,7 @@ export function GanttChart() {
 
     const containerRect = container.getBoundingClientRect();
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
-    const sidebarW = 12 * rem;
+    const sidebarW = 10 * rem;
 
     const positions = new Map<string, BarPos>();
     container.querySelectorAll<HTMLElement>("[data-gantt-bar]").forEach((el) => {
@@ -246,9 +214,7 @@ export function GanttChart() {
         yBottom: r.bottom - containerRect.top,
       });
     });
-
     setBarPositions(positions);
-    setMeasuredGridHeight(container.scrollHeight);
   }, [zoom]);
 
   const handleBarEnter = useCallback((projectId: string) => {
@@ -264,19 +230,16 @@ export function GanttChart() {
     if (!hoveredPos) return [];
 
     const result: { id: string; x1: number; y1: number; x2: number; y2: number }[] = [];
-
     for (const depId of proj.dependencies) {
       const depPos = barPositions.get(depId);
       if (!depPos) continue;
       result.push({ id: `from-${depId}`, x1: depPos.xEnd, y1: depPos.yCenter, x2: hoveredPos.xStart, y2: hoveredPos.yCenter });
     }
-
     for (const childId of dependentsMap.get(hoveredId) ?? []) {
       const childPos = barPositions.get(childId);
       if (!childPos) continue;
       result.push({ id: `to-${childId}`, x1: hoveredPos.xEnd, y1: hoveredPos.yCenter, x2: childPos.xStart, y2: childPos.yCenter });
     }
-
     return result;
   }, [hoveredId, barPositions, zoom, projectMap, dependentsMap]);
 
@@ -288,125 +251,28 @@ export function GanttChart() {
     if (!pos) return null;
     const rank = rankMap.get(hoveredId) ?? 0;
     const w = getWsjf(proj);
-
     const blockedBy = proj.dependencies
       .map((id) => projectMap.get(id)?.name)
       .filter(Boolean) as string[];
-
     const unblocks = (dependentsMap.get(hoveredId) ?? [])
       .map((id) => projectMap.get(id)?.name)
       .filter(Boolean) as string[];
-
     return { proj, pos, rank, w, blockedBy, unblocks };
   }, [hoveredId, barPositions, projectMap, rankMap, dependentsMap]);
 
-  const totalCap = useMemo(
-    () => squads.reduce((s, sq) => s + (effectiveFe(sq) + effectiveBe(sq)) * horizonMonths, 0),
-    [squads, horizonMonths],
-  );
-
-  const { totalUsed, totalFeUsed, totalBeUsed } = useMemo(() => {
-    let used = 0, feUsed = 0, beUsed = 0;
-    for (const e of scheduleEntries) {
-      const p = projectMap.get(e.projectId);
-      if (!p) continue;
-      used += (p.feNeeded + p.beNeeded) * p.duration;
-      feUsed += p.feNeeded * p.duration;
-      beUsed += p.beNeeded * p.duration;
-    }
-    return { totalUsed: used, totalFeUsed: feUsed, totalBeUsed: beUsed };
-  }, [scheduleEntries, projectMap]);
-
-  const globalUtil = totalCap > 0 ? (totalUsed / totalCap) * 100 : 0;
-  const totalFeCap = useMemo(
-    () => squads.reduce((s, sq) => s + effectiveFe(sq) * horizonMonths, 0),
-    [squads, horizonMonths],
-  );
-  const totalBeCap = useMemo(
-    () => squads.reduce((s, sq) => s + effectiveBe(sq) * horizonMonths, 0),
-    [squads, horizonMonths],
-  );
-
-  // --- Early return after all hooks ---
   if (!displaySchedule) return null;
 
-  function verdictBadge(): { text: string; cls: string } {
-    if (globalUtil >= 90) return { text: "At capacity", cls: "text-red-700 bg-red-50 border-red-200" };
-    if (globalUtil >= 70) return { text: "Healthy", cls: "text-emerald-700 bg-emerald-50 border-emerald-200" };
-    return { text: "Under-utilized", cls: "text-amber-700 bg-amber-50 border-amber-200" };
-  }
-  const verdict = verdictBadge();
-
   return (
-    <div className={`space-y-4 transition-opacity duration-150 ${isReoptimizing ? "opacity-50 pointer-events-none" : ""}`}>
+    <div className={`space-y-3 transition-opacity duration-150 ${isReoptimizing ? "opacity-50 pointer-events-none" : ""}`}>
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground mr-auto">
-          Delivery timeline
-        </h2>
-        {zoom !== "year" && (
+      {zoom !== "year" && (
+        <div className="flex items-center gap-2 text-sm">
           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setZoom(zoom === "week" ? "month" : "year")}>
             &larr; Back
           </Button>
-        )}
-        <div className="flex rounded-md border overflow-hidden text-xs">
-          {(["year", "month", "week"] as ZoomLevel[]).map((z) => (
-            <button
-              key={z}
-              onClick={() => setZoom(z)}
-              className={`px-3 py-1.5 font-medium capitalize transition-colors ${
-                zoom === z
-                  ? "bg-foreground text-background"
-                  : "hover:bg-muted text-muted-foreground"
-              }`}
-            >
-              {z}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Pipeline health */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-3 border rounded-lg bg-muted/20">
-        <div className="flex items-center gap-2.5">
-          <span className="text-xs text-muted-foreground">Utilization</span>
-          <div className="w-28 h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${utilBg(globalUtil)}`}
-              style={{ width: `${Math.min(globalUtil, 100)}%` }}
-            />
-          </div>
-          <span className={`text-sm font-bold tabular-nums ${utilColor(globalUtil)}`}>
-            {pct(globalUtil)}
-          </span>
-        </div>
-        <div className="h-5 w-px bg-border" />
-        <div className="flex gap-4 text-xs">
-          <div>
-            <span className="text-muted-foreground">FE&ensp;</span>
-            <span className={`font-semibold tabular-nums ${utilColor(totalFeCap > 0 ? (totalFeUsed / totalFeCap) * 100 : 0)}`}>
-              {fmt(totalFeUsed)}<span className="text-muted-foreground font-normal">/{fmt(totalFeCap)}</span>
-            </span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">BE&ensp;</span>
-            <span className={`font-semibold tabular-nums ${utilColor(totalBeCap > 0 ? (totalBeUsed / totalBeCap) * 100 : 0)}`}>
-              {fmt(totalBeUsed)}<span className="text-muted-foreground font-normal">/{fmt(totalBeCap)}</span>
-            </span>
-          </div>
-        </div>
-        <div className={`text-xs font-medium px-2.5 py-1 rounded-full border ml-auto ${verdict.cls}`}>
-          {verdict.text}
-        </div>
-      </div>
-
-      {/* Sub-nav for month/week zoom */}
-      {zoom !== "year" && (
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground text-xs">Viewing:</span>
           <span className="text-xs font-medium">
             {MONTH_LABELS[actualMonth]} {actualYear}
-            {zoom === "week" && ` — W${focusWeek + 1}`}
+            {zoom === "week" && ` \u2014 W${focusWeek + 1}`}
           </span>
           {zoom === "month" && (
             <div className="flex gap-1 ml-1">
@@ -431,7 +297,7 @@ export function GanttChart() {
       <div className="border rounded-lg overflow-hidden">
         {/* Column headers */}
         <div className="flex bg-muted/40">
-          <div className="w-48 shrink-0 px-3 py-2.5 text-xs font-semibold text-muted-foreground border-r">
+          <div className="w-40 shrink-0 px-3 py-2 text-xs font-semibold text-muted-foreground border-r">
             Team
           </div>
           <div
@@ -441,7 +307,7 @@ export function GanttChart() {
             {columns.map((label, i) => (
               <div
                 key={i}
-                className={`px-1 py-2.5 text-center text-xs font-medium text-muted-foreground border-l transition-colors ${
+                className={`px-1 py-2 text-center text-xs font-medium text-muted-foreground border-l transition-colors ${
                   zoom !== "week" ? "cursor-pointer hover:bg-accent/50" : ""
                 }`}
                 onClick={() => {
@@ -455,47 +321,37 @@ export function GanttChart() {
           </div>
         </div>
 
-        {/* Squad rows + overlay container */}
+        {/* Squad rows */}
         <div className="relative" ref={gridBodyRef} onMouseLeave={() => setHoveredId(null)}>
           {squadRowData.map((row) => (
             <div key={row.squad.id} className="flex border-t">
               {/* Squad sidebar */}
-              <div className="w-48 shrink-0 px-3 py-2 border-r flex flex-col justify-center gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold truncate">{row.squad.name}</span>
-                  <span className={`text-xs font-bold tabular-nums ${utilColor(row.stats.utilization)}`}>
-                    {pct(row.stats.utilization)}
+              <div className="w-40 shrink-0 px-3 py-2 border-r flex flex-col justify-center gap-0.5">
+                <span className="text-xs font-semibold truncate">{row.squad.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${utilBg(row.util)}`}
+                      style={{ width: `${Math.min(row.util, 100)}%` }}
+                    />
+                  </div>
+                  <span className={`text-[0.6rem] font-bold tabular-nums ${utilColor(row.util)}`}>
+                    {Math.round(row.util)}%
                   </span>
                 </div>
-                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${utilBg(row.stats.utilization)}`}
-                    style={{ width: `${Math.min(row.stats.utilization, 100)}%` }}
-                  />
-                </div>
-                {row.stats.idleMonths > 0 && zoom === "year" && (
-                  <div className="text-xs text-muted-foreground tabular-nums leading-tight">
-                    {fmt(row.stats.feIdle)} FE + {fmt(row.stats.beIdle)} BE spare
-                  </div>
-                )}
               </div>
 
               {/* Timeline */}
               <div className="flex-1 relative" style={{ minHeight: row.height }}>
-                {/* Grid lines + idle shading */}
                 <div
                   className="absolute inset-0 grid pointer-events-none"
                   style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}
                 >
-                  {columns.map((_, i) => {
-                    const isIdle = zoom === "year" && i >= row.lastEnd && row.entries.length > 0;
-                    return (
-                      <div key={i} className={`border-l h-full ${isIdle ? "bg-amber-50/60" : ""}`} />
-                    );
-                  })}
+                  {columns.map((_, i) => (
+                    <div key={i} className="border-l h-full" />
+                  ))}
                 </div>
 
-                {/* Project bars */}
                 {row.lanes.map((lane, li) =>
                   lane.map((entry) => {
                     const proj = projectMap.get(entry.projectId);
@@ -517,7 +373,6 @@ export function GanttChart() {
                       <div
                         key={entry.projectId}
                         data-gantt-bar={entry.projectId}
-                        data-rank={rank}
                         className={`absolute rounded-md px-2 text-xs text-white font-medium flex items-center gap-1.5 shadow-sm transition-opacity ${colorMap.get(entry.projectId)} ${
                           reassigned ? "ring-2 ring-amber-400/80 ring-offset-1" : ""
                         } ${missedDeadline ? "ring-2 ring-red-400/80 ring-offset-1" : ""} ${
@@ -537,37 +392,21 @@ export function GanttChart() {
                   }),
                 )}
 
-                {/* Idle label */}
-                {zoom === "year" && row.stats.idleMonths > 0 && row.entries.length > 0 && (
-                  <div
-                    className="absolute flex items-center justify-center text-xs text-amber-500/60 font-medium pointer-events-none"
-                    style={{
-                      left: `${(row.lastEnd / colCount) * 100}%`,
-                      width: `${(row.stats.idleMonths / colCount) * 100}%`,
-                      top: 0, height: "100%",
-                    }}
-                  >
-                    {row.stats.idleMonths} mo idle
-                  </div>
-                )}
-
                 {row.entries.length === 0 && (
                   <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground/40">
-                    No projects assigned
+                    No projects
                   </div>
                 )}
               </div>
             </div>
           ))}
 
-          {/* Overlay container for arrows + tooltip, aligned to timeline area */}
+          {/* Dependency arrows + tooltip overlay */}
           {zoom === "year" && (arrows.length > 0 || tooltip) && (
             <div
               className="absolute top-0 bottom-0 pointer-events-none"
-              style={{ left: "12rem", right: 0 }}
-              data-gantt-overlay
+              style={{ left: "10rem", right: 0 }}
             >
-              {/* Dependency arrows (HTML-based for pixel-accurate positioning) */}
               {arrows.map((a) => {
                 const dx = a.x2 - a.x1;
                 const dy = a.y2 - a.y1;
@@ -578,29 +417,20 @@ export function GanttChart() {
                     <div
                       className="absolute origin-left pointer-events-none"
                       style={{
-                        left: a.x1,
-                        top: a.y1,
-                        width: length,
-                        height: 0,
+                        left: a.x1, top: a.y1,
+                        width: length, height: 0,
                         borderTop: "2px dashed rgba(0,0,0,0.35)",
                         transform: `rotate(${angle}deg)`,
                       }}
                     />
                     <div
                       className="absolute rounded-full pointer-events-none"
-                      style={{
-                        left: a.x2 - 4,
-                        top: a.y2 - 4,
-                        width: 8,
-                        height: 8,
-                        backgroundColor: "rgba(0,0,0,0.4)",
-                      }}
+                      style={{ left: a.x2 - 4, top: a.y2 - 4, width: 8, height: 8, backgroundColor: "rgba(0,0,0,0.4)" }}
                     />
                   </div>
                 );
               })}
 
-              {/* Hover tooltip */}
               {tooltip && (
                 <div
                   className="absolute z-20"
@@ -609,21 +439,16 @@ export function GanttChart() {
                     top: tooltip.pos.yBottom + 6,
                     transform: "translateX(-50%)",
                   }}
-                  data-gantt-tooltip
                 >
                   <div className="bg-popover text-popover-foreground shadow-lg border rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-nowrap">
                     <div className="font-semibold">
-                      #{tooltip.rank} &middot; Priority {tooltip.w.toFixed(1)} &middot; {tooltip.proj.feNeeded} frontend + {tooltip.proj.beNeeded} backend &times; {tooltip.proj.duration} months
+                      #{tooltip.rank} &middot; {tooltip.proj.feNeeded}FE + {tooltip.proj.beNeeded}BE &times; {tooltip.proj.duration}mo
                     </div>
                     {tooltip.blockedBy.length > 0 && (
-                      <div className="text-muted-foreground">
-                        Blocked by: {tooltip.blockedBy.join(", ")}
-                      </div>
+                      <div className="text-muted-foreground">Blocked by: {tooltip.blockedBy.join(", ")}</div>
                     )}
                     {tooltip.unblocks.length > 0 && (
-                      <div className="text-muted-foreground">
-                        Unblocks: {tooltip.unblocks.join(", ")}
-                      </div>
+                      <div className="text-muted-foreground">Unblocks: {tooltip.unblocks.join(", ")}</div>
                     )}
                   </div>
                 </div>
@@ -635,18 +460,18 @@ export function GanttChart() {
 
       {/* Deferred */}
       {scheduleDeferred.length > 0 && (
-        <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
-          <h3 className="text-xs font-semibold text-destructive mb-3">
-            Won&apos;t fit in time &mdash; {scheduleDeferred.length} project{scheduleDeferred.length > 1 ? "s" : ""}
+        <div className="p-3 border border-destructive/20 rounded-lg bg-destructive/5">
+          <h3 className="text-xs font-semibold text-destructive mb-2">
+            Won&apos;t fit &mdash; {scheduleDeferred.length} project{scheduleDeferred.length > 1 ? "s" : ""}
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {scheduleDeferred.map((d) => {
               const p = projectMap.get(d.projectId);
               if (!p) return null;
               return (
                 <div key={d.projectId} className="flex items-start gap-2">
                   <Badge variant="destructive" className="shrink-0 text-xs">{p.name}</Badge>
-                  <span className="text-xs text-muted-foreground leading-relaxed">{d.reason}</span>
+                  <span className="text-[0.65rem] text-muted-foreground leading-relaxed">{d.reason}</span>
                 </div>
               );
             })}

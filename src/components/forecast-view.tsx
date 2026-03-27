@@ -152,10 +152,7 @@ function UncertaintyControls({
   return (
     <div className="border rounded-lg p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground">How messy is the real world?</p>
-          <p className="text-[0.65rem] text-muted-foreground/70">Adjust these sliders to match your reality. Higher = more chaos.</p>
-        </div>
+        <p className="text-xs font-semibold text-muted-foreground">Uncertainty</p>
         <div className="flex items-center gap-2">
           <div className="flex rounded-md border border-input overflow-hidden">
             {RUN_COUNTS.map((n) => {
@@ -269,17 +266,8 @@ export function ForecastView({
       )}
 
       {!result && !running && (
-        <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed rounded-lg">
-          <p className="text-sm font-medium">Ready to test your plan</p>
-          <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-            We&apos;ll simulate your plan many times with random problems (missed estimates, rework, interruptions) to see how likely it is to work out.
-          </p>
-          <button
-            onClick={handleRun}
-            className="mt-4 px-5 py-2 text-xs font-semibold rounded-lg bg-foreground text-background hover:bg-foreground/90 transition-colors"
-          >
-            Test my plan now
-          </button>
+        <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed rounded-lg">
+          <p className="text-sm text-muted-foreground">Click &ldquo;Run analysis&rdquo; to stress-test your plan</p>
         </div>
       )}
     </div>
