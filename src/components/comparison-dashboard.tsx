@@ -128,7 +128,7 @@ function MiniGantt({
             <div key={sid} className="flex border-t first:border-t-0">
               <div className="w-20 shrink-0 px-2 py-1 border-r flex items-center">
                 <span className="text-[0.6rem] text-muted-foreground truncate">
-                  Squad {squadIds.indexOf(sid) + 1}
+                  Team {squadIds.indexOf(sid) + 1}
                 </span>
               </div>
               <div className="flex-1 relative" style={{ minHeight: height }}>
@@ -219,6 +219,10 @@ export function ComparisonDashboard({
     return lines;
   }, [comparison, trad, cycleOverheadPct, cycleLengthWeeks]);
 
+  const numSquads = comparison.traditional.headcount > 0
+    ? Math.round(comparison.miniSquad.headcount / 2)
+    : 0;
+
   return (
     <div className="space-y-5">
       {/* Section header */}
@@ -227,8 +231,36 @@ export function ComparisonDashboard({
           What if you changed your team setup?
         </h2>
         <p className="text-xs text-muted-foreground/70 mt-0.5">
-          We compare your current teams against two alternative setups — all based on your actual projects.
+          We take your actual projects and simulate three different ways to organise your people.
         </p>
+      </div>
+
+      {/* Scenario explanations */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="p-4 border rounded-lg bg-slate-50/60 border-slate-200/60">
+          <div className="text-xs font-bold text-slate-700 mb-2">Current setup</div>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Your teams as they are today: <strong>{trad.headcount} people</strong> across {numSquads} teams,
+            with separate frontend and backend engineers.
+            Each person can only work on their speciality.
+          </p>
+        </div>
+        <div className="p-4 border rounded-lg bg-emerald-50/60 border-emerald-200/60">
+          <div className="text-xs font-bold text-emerald-700 mb-2">Full-stack + AI</div>
+          <p className="text-xs text-emerald-700 leading-relaxed">
+            Same <strong>{trad.headcount} people</strong>, same {numSquads} teams — but every engineer
+            can now work on both frontend and backend (with AI assistance).
+            No one is blocked waiting for a specialist.
+          </p>
+        </div>
+        <div className="p-4 border rounded-lg bg-violet-50/60 border-violet-200/60">
+          <div className="text-xs font-bold text-violet-700 mb-2">Tiny AI teams</div>
+          <p className="text-xs text-violet-700 leading-relaxed">
+            Radically smaller: just <strong>1 engineer + 1 PM per team</strong> = {numSquads} teams
+            of 2 people ({comparison.miniSquad.headcount} total, down from {trad.headcount}).
+            The question: how productive must AI make each person to keep up?
+          </p>
+        </div>
       </div>
 
       {/* Key numbers */}
@@ -252,7 +284,7 @@ export function ComparisonDashboard({
             +{fmt(comparison.flexibilityGainPct)}%
           </div>
           <div className="text-[0.65rem] text-emerald-600/70 mt-1">
-            more value delivered by removing role bottlenecks
+            more value delivered when nobody waits for a specialist
           </div>
         </div>
         <div className="p-4 border rounded-lg bg-violet-50/40 border-violet-200/50">
@@ -263,7 +295,7 @@ export function ComparisonDashboard({
             {fmt(comparison.breakEvenMultiplier)}x faster
           </div>
           <div className="text-[0.65rem] text-violet-600/70 mt-1">
-            for a tiny AI team to match your current output
+            for {comparison.miniSquad.headcount} people to match what {trad.headcount} deliver today
           </div>
         </div>
       </div>
@@ -345,7 +377,7 @@ export function ComparisonDashboard({
             entries={trad.entries}
             projects={projects}
             horizonMonths={horizonMonths}
-            label={`Traditional (${trad.headcount} people)`}
+            label={`Current setup (${trad.headcount} people, ${numSquads} teams)`}
             headcount={trad.headcount}
             accentColor="bg-slate-50/50"
           />
@@ -353,7 +385,7 @@ export function ComparisonDashboard({
             entries={ganttScenario.entries}
             projects={projects}
             horizonMonths={horizonMonths}
-            label={`${ganttScenario.label} (${ganttScenario.headcount} people)`}
+            label={`${ganttScenario.label} (${ganttScenario.headcount} people, ${numSquads} teams)`}
             headcount={ganttScenario.headcount}
             accentColor="bg-violet-50/50"
           />
