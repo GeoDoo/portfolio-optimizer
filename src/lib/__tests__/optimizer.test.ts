@@ -162,13 +162,13 @@ describe("Correctness", () => {
     }
   });
 
-  it("handles project with zero FE and zero BE needed", () => {
+  it("filters out project with zero FE and zero BE needed", () => {
     const sq = makeSquad("Alpha", [100], [100]);
     const p = makeProject("NoResources", { squadId: sq.id, feNeeded: 0, beNeeded: 0, duration: 2 });
     const result = optimize([p], [sq], 6);
 
-    expect(scheduled(result)).toHaveLength(1);
-    expect(findEntry(result, p.id)!.startMonth).toBe(0);
+    expect(scheduled(result)).toHaveLength(0);
+    expect(result.deferred).toHaveLength(0);
   });
 
   it("handles missing dependency gracefully — treats as satisfied", () => {

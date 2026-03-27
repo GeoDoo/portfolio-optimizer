@@ -159,8 +159,12 @@ export function ProjectTable({ alerts }: { alerts?: Alert[] }) {
                       <td className="px-1 py-1.5">
                         <input
                           type="number" min={0} value={p.feNeeded}
-                          onChange={(e) => updateProject(p.id, { feNeeded: parseInt(e.target.value) || 0 })}
-                          className={`${inputClass} w-9 mx-auto block`}
+                          onChange={(e) => {
+                            const val = Math.max(0, parseInt(e.target.value) || 0);
+                            if (val === 0 && p.beNeeded === 0) return;
+                            updateProject(p.id, { feNeeded: val });
+                          }}
+                          className={`${inputClass} w-9 mx-auto block ${p.feNeeded === 0 && p.beNeeded === 0 ? "ring-1 ring-red-400" : ""}`}
                         />
                       </td>
 
@@ -168,8 +172,12 @@ export function ProjectTable({ alerts }: { alerts?: Alert[] }) {
                       <td className="px-1 py-1.5">
                         <input
                           type="number" min={0} value={p.beNeeded}
-                          onChange={(e) => updateProject(p.id, { beNeeded: parseInt(e.target.value) || 0 })}
-                          className={`${inputClass} w-9 mx-auto block`}
+                          onChange={(e) => {
+                            const val = Math.max(0, parseInt(e.target.value) || 0);
+                            if (val === 0 && p.feNeeded === 0) return;
+                            updateProject(p.id, { beNeeded: val });
+                          }}
+                          className={`${inputClass} w-9 mx-auto block ${p.beNeeded === 0 && p.feNeeded === 0 ? "ring-1 ring-red-400" : ""}`}
                         />
                       </td>
 
