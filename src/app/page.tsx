@@ -238,6 +238,29 @@ export default function Home() {
           </div>
         </div>
 
+        <div className="w-px h-8 bg-border" />
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            AI Effect
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={-10}
+              max={10}
+              step={1}
+              value={Math.round(aiEffect * 10)}
+              onChange={(e) => setAiEffect(parseInt(e.target.value) / 10)}
+              className="w-20 h-1.5 accent-current"
+            />
+            <span className={`text-[0.7rem] font-semibold tabular-nums w-10 ${
+              aiEffect > 0 ? "text-green-600" : aiEffect < 0 ? "text-red-600" : "text-muted-foreground"
+            }`}>
+              {aiEffect > 0 ? "+" : ""}{aiEffect.toFixed(1)}
+            </span>
+          </div>
+        </div>
+
         {squads.length > 0 && (
           <div className="ml-auto text-right space-y-1 pl-4">
             <div className="text-xs text-muted-foreground">
