@@ -305,7 +305,24 @@ export default function Home() {
       {/* Status bar */}
       {(displaySchedule || (squads.length > 0 && projects.length > 0)) && (
         <div className="flex items-center gap-3 px-1">
-          {displaySchedule ? (
+          {displaySchedule ? (() => {
+            const totalPmFte = squads.reduce(
+              (sum, s) => sum + s.members.filter((m) => m.role === "pm").reduce((ms, m) => ms + (m.allocation / 100) * (m.skill ?? 1), 0),
+              0,
+            );
+            let peakConcurrent = 0;
+            if (displaySchedule.entries.length > 0) {
+              const maxMonth = Math.max(...displaySchedule.entries.map((e) => e.endMonth));
+              for (let m = 0; m < maxMonth; m++) {
+                const active = displaySchedule.entries.filter((e) => e.startMonth <= m && e.endMonth > m).length;
+                peakConcurrent = Math.max(peakConcurrent, active);
+              }
+            }
+            const pmRatio = totalPmFte > 0 ? peakConcurrent / totalPmFte : 0;
+            const pmRisk = pmRatio > 5 ? "high" : pmRatio > 3 ? "medium" : "low";
+            const pmColor = pmRisk === "high" ? "text-red-600" : pmRisk === "medium" ? "text-amber-600" : "text-green-600";
+
+            return (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <div className={`w-2 h-2 rounded-full ${schedule ? "bg-emerald-500" : "bg-amber-400 animate-pulse"}`} />
               <span className="font-medium text-foreground">{displaySchedule.entries.length}</span> scheduled
@@ -317,9 +334,18 @@ export default function Home() {
                   </span>
                 </>
               )}
+              {totalPmFte > 0 && (
+                <>
+                  <span className="mx-1">&middot;</span>
+                  <span className={`text-xs font-medium ${pmColor}`}>
+                    PM load: {pmRatio.toFixed(1)} proj/PM ({pmRisk})
+                  </span>
+                </>
+              )}
               {!schedule && <span className="text-xs text-muted-foreground/60 ml-1">updating&hellip;</span>}
             </div>
-          ) : (
+            );
+          })() : (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               <span>Optimizing&hellip;</span>
