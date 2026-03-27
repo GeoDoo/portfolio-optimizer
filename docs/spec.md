@@ -30,18 +30,21 @@ A system that answers two questions:
 
 ## 3. Inputs (Conceptual)
 
-- **Work**: set of projects/features to deliver
-- **Capacity**: available effort over time
+- **Work**: set of projects/features to deliver (duration, value, priority, dependencies)
+- **Capacity**: per-person effort (allocation %)
 - **Constraints**:
   - dependencies
   - sequencing
   - capability limits
+  - skill match requirements
 - **Team Structure**:
   - composition (size, roles)
+  - individual efficiency / seniority (0–1 skill factor per member)
   - operating model
   - AI involvement
+- **AI Effect**: per-team modifier (-1 → +1) — AI may help or hinder
 - **Objective**:
-  - maximize value
+  - maximize value (WSJF)
   - minimize delay
   - maximize throughput
 
@@ -65,7 +68,15 @@ A system that answers two questions:
 - Impact of changing priorities
 - Impact of changing team structure
 
-## 5. Key Behaviors
+## 5. Metrics
+
+- **Completion time** — when does delivery finish?
+- **Throughput per engineer** — output relative to headcount
+- **PM bottleneck risk** — ratio of projects to PM capacity; flags when PMs are overloaded
+- **Variance / uncertainty** — spread of outcomes across simulations (P10–P90)
+- **Required productivity boost** — minimum multiplier for micro-squad adoption to break even
+
+## 6. Key Behaviors
 
 ### 5.1 Deterministic vs Probabilistic
 
@@ -87,11 +98,11 @@ A system that answers two questions:
 - Each scenario runs independently
 - Results are directly comparable
 
-## 6. Team Structure Modeling
+## 7. Team Structure Modeling
 
 System must support different production models:
 
-- **Traditional Squad**
+- **Traditional Squad** (N Eng + 1 PM)
   - higher parallelism
   - coordination overhead
 
@@ -102,7 +113,28 @@ System must support different production models:
 
 System must allow comparison of outcomes between these.
 
-## 7. Uncertainty Modeling (Simulation Only)
+### Individual Efficiency
+
+Each team member has a skill/seniority factor (0–1) that scales their effective capacity. A member at 0.5 contributes half the throughput of one at 1.0. This allows modeling junior vs senior engineers, part-time contributors, and ramping-up new hires.
+
+### AI Impact Modeling
+
+A per-scenario AI effect parameter (-1 → +1):
+
+- **+1**: AI doubles effective throughput (best case)
+- **0**: AI has no effect
+- **-1**: AI halves effective throughput (worst case — overhead of tooling outweighs benefit)
+
+Applied as a multiplier to the micro-squad's engineering capacity: `effectiveCapacity = baseCapacity * (1 + aiEffect)`.
+
+## 8. Constraints
+
+- Capacity limits per person (allocation %)
+- Skill match requirements (member skill must meet project threshold)
+- Dependency sequencing (topological ordering)
+- Optional: AI may help or hinder (via aiEffect parameter)
+
+## 9. Uncertainty Modeling (Simulation Only)
 
 System must reflect:
 
@@ -113,7 +145,7 @@ System must reflect:
 
 Outputs must show **distribution, not point estimates**.
 
-## 8. Decision Support
+## 10. Decision Support
 
 System must enable users to answer:
 
@@ -122,7 +154,7 @@ System must enable users to answer:
 - How reliable is this plan?
 - Is a different team structure better?
 
-## 9. UX Requirements (High-Level)
+## 11. UX Requirements (High-Level)
 
 - Define inputs simply
 - Switch between:
@@ -134,15 +166,15 @@ System must enable users to answer:
   - distributions
   - trade-offs
 
-## 10. Success Criteria
+## 12. Success Criteria
 
 System is successful if users can:
 
-- Produce a credible delivery plan in seconds
-- Understand risk and variability immediately
-- Make trade-offs explicitly
-- Evaluate new team models (e.g. Micro + AI vs Squad)
+- Generate a credible plan
+- Simulate realistic outcomes
+- Compare team structures and AI impact
+- Identify minimum productivity boost required for micro-squad adoption
 
-## 11. Positioning
+## 13. Positioning
 
 > A system that turns engineering capacity into both a delivery plan and a probabilistic forecast — and allows testing of different team structures.

@@ -1,6 +1,6 @@
 # Phase 2: Simulation Engine (Monte Carlo)
 
-**Spec reference**: Sections 2.2, 4.2, 5.1, 7
+**Spec reference**: Sections 4.2 (Outcomes), 6.1 (Deterministic vs Probabilistic), 9 (Uncertainty Modeling)
 
 ## Summary
 
@@ -129,8 +129,8 @@ new Worker(new URL('./simulation-worker.ts', import.meta.url))
 
 - New field: `uncertainty: UncertaintyParams` with defaults
 - New action: `setUncertainty(params)` — does NOT invalidate schedule (simulation is separate)
-- Version bump: 6 → 7
-- Migration: `if (version < 7) state.uncertainty = { estimationErrorPct: 30, interruptionProbPct: 10, dependencyDelayPct: 15, reworkProbPct: 10 }`
+- Version bump (after Phase 1.5 migrations)
+- Migration: adds default `uncertainty` object
 
 ## UI: Forecast View
 

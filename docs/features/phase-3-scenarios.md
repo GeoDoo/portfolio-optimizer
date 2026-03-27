@@ -1,6 +1,6 @@
 # Phase 3: Scenario System
 
-**Spec reference**: Sections 2.3, 4.3, 5.3, 5.4, 6, 9
+**Spec reference**: Sections 2.3, 4.3, 6.3, 6.4, 7, 11
 
 ## Summary
 
@@ -19,6 +19,7 @@ export type Scenario = {
   uncertainty: UncertaintyParams;
   cycleLengthWeeks: number;
   cycleOverheadPct: number;
+  aiEffect: number; // -1 to +1
 };
 
 export type ScenarioResult = {

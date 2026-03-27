@@ -15,27 +15,39 @@ The system currently provides:
 
 | Spec Section | Gap |
 |---|---|
-| 2.2 Simulation | No probabilistic modeling at all |
-| 3 Objectives | Only WSJF — no max-value, min-delay, max-throughput |
-| 4.2 Outcomes | No probability ranges, no P10/P50/P90, no completion confidence |
+| ~~3 Objectives~~ | ~~Only WSJF~~ → **DONE** (Phase 1 shipped) |
+| 5 Metrics | No PM bottleneck risk metric |
+| 7 Individual Efficiency | No seniority/skill factor per member |
+| 7 AI Impact | No AI effect parameter (-1 → +1) |
+| 8 Constraints | No skill match requirement |
+| 9 Uncertainty | No estimation error, interruptions, rework, dependency delay modeling |
+| 4.2 Outcomes | No probability ranges, no P10/P50/P90 |
 | 5.4 Scenario Isolation | Comparison is hardcoded to 3 scenarios, not user-configurable |
-| 7 Uncertainty | No estimation error, interruptions, rework, dependency delay modeling |
 
-## Phase 1: Objective Selection
+## Phase 1: Objective Selection ✅
 
-**Spec coverage**: Section 3 (Objectives)
+**Status**: Complete
 
-Add switchable optimization objectives: WSJF, Max Value, Min Delay, Max Throughput.
-
-- Parameterise the optimizer's sort strategy
-- Add objective to store with UI selector
-- Thread through all callers (alerts, comparison)
+Added switchable optimization objectives: WSJF, Max Value, Min Delay, Max Throughput. Parameterised optimizer sort strategy, added to store (v6), wired through all callers.
 
 **Details**: [features/phase-1-objectives.md](features/phase-1-objectives.md)
 
+## Phase 1.5: Efficiency & AI Modeling
+
+**Spec coverage**: Sections 7 (Individual Efficiency), 7 (AI Impact), 5 (PM Bottleneck), 8 (Skill Match)
+
+Add individual member efficiency and AI impact parameters that modify effective capacity.
+
+- **Skill factor (0–1)** per member: scales effective FE/BE contribution. Default 1.0.
+- **AI effect (-1 → +1)** per scenario: `effectiveCapacity = base * (1 + aiEffect)`. Default 0.
+- **PM bottleneck risk metric**: ratio of active projects to available PM capacity.
+- Store migration, UI controls, thread through optimizer.
+
+**Details**: [features/phase-1.5-efficiency.md](features/phase-1.5-efficiency.md)
+
 ## Phase 2: Simulation Engine (Monte Carlo)
 
-**Spec coverage**: Sections 2.2, 4.2, 5.1, 7
+**Spec coverage**: Sections 9, 4.2, 6.1
 
 Run N optimizer iterations with randomised inputs, producing probability distributions.
 
@@ -47,9 +59,9 @@ Run N optimizer iterations with randomised inputs, producing probability distrib
 
 ## Phase 3: Scenario System
 
-**Spec coverage**: Sections 2.3, 4.3, 5.3, 5.4, 6, 9
+**Spec coverage**: Sections 2.3, 4.3, 6.3, 6.4, 7, 11
 
-User-defined scenarios with full flexibility (different teams, projects, objectives per scenario).
+User-defined scenarios with full flexibility (different teams, projects, objectives, AI effect per scenario).
 
 - Scenario CRUD in store
 - Preset templates (Traditional, Full-stack AI, Mini Squad)
@@ -60,7 +72,7 @@ User-defined scenarios with full flexibility (different teams, projects, objecti
 
 ## Commit Strategy
 
-Each phase ships as multiple small commits. No phase depends on another being fully complete to start, though Phase 2 and 3 use the `Objective` type from Phase 1.
+Each phase ships as multiple small commits. Phase 1.5 is a prerequisite for Phase 3 (scenarios need AI effect). Phase 2 and 3 are independent of each other.
 
 ## Out of Scope (Future)
 
