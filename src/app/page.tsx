@@ -431,7 +431,6 @@ export default function Home() {
               projects={projects}
               squads={squads}
               horizonMonths={horizonMonths}
-              objective={objective}
             />
           )}
           {activeView === "comparison" && comparison && (

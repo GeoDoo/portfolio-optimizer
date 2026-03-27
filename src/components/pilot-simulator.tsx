@@ -1,22 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Project, Squad, Member, Objective, ROLE_META } from "@/lib/types";
-import { optimize } from "@/lib/optimizer";
-
-function buildPilotSquad(numEngineers: number, includePm: boolean, multiplier: number): Squad {
-  const members: Member[] = [];
-  if (includePm) {
-    members.push({ id: "pilot-pm", name: "Pilot PM", role: "pm", seniority: "senior", allocation: 100, skill: 1 });
-  }
-  for (let i = 0; i < numEngineers; i++) {
-    members.push(
-      { id: `pilot-fe-${i}`, name: `Pilot Eng ${i + 1}`, role: "fe", seniority: "senior", allocation: Math.round(multiplier * 100), skill: 1 },
-      { id: `pilot-be-${i}`, name: `Pilot Eng ${i + 1}`, role: "be", seniority: "senior", allocation: Math.round(multiplier * 100), skill: 1 },
-    );
-  }
-  return { id: "pilot-squad", name: "AI Pilot Squad", members };
-}
+import { Project, Squad, ROLE_META } from "@/lib/types";
+import { effectiveFe, effectiveBe } from "@/lib/optimizer";
 
 type PilotResult = {
   deliveryMonths: number;
@@ -24,23 +10,53 @@ type PilotResult = {
   feasible: boolean;
 };
 
-function runPilot(
-  project: Project,
-  squad: Squad,
-  horizonMonths: number,
-  objective: Objective,
-): PilotResult {
-  const adjusted = { ...project, squadId: squad.id, dependencies: [] };
-  const result = optimize([adjusted], [squad], horizonMonths, objective);
-  if (result.entries.length === 0) {
-    return { deliveryMonths: -1, teamSize: squad.members.length, feasible: false };
+/**
+ * Calculate how long a project takes given a squad's capacity.
+ *
+ * Total FE effort = feNeeded * duration (person-months of FE work)
+ * Total BE effort = beNeeded * duration (person-months of BE work)
+ *
+ * Delivery time = max(FE effort / FE capacity, BE effort / BE capacity),
+ * rounded up. If the squad has zero capacity for a required role, it's infeasible.
+ */
+function calcDelivery(project: Project, feCap: number, beCap: number, horizonMonths: number): PilotResult {
+  const feEffort = project.feNeeded * project.duration;
+  const beEffort = project.beNeeded * project.duration;
+
+  if ((feEffort > 0 && feCap <= 0) || (beEffort > 0 && beCap <= 0)) {
+    return { deliveryMonths: -1, teamSize: 0, feasible: false };
   }
-  const entry = result.entries[0];
-  return {
-    deliveryMonths: entry.endMonth - entry.startMonth,
-    teamSize: squad.members.length,
-    feasible: true,
-  };
+
+  const feMonths = feEffort > 0 ? feEffort / feCap : 0;
+  const beMonths = beEffort > 0 ? beEffort / beCap : 0;
+  const months = Math.ceil(Math.max(feMonths, beMonths));
+
+  if (months > horizonMonths) {
+    return { deliveryMonths: -1, teamSize: 0, feasible: false };
+  }
+
+  return { deliveryMonths: Math.max(1, months), teamSize: 0, feasible: true };
+}
+
+function runTraditional(project: Project, squad: Squad, horizonMonths: number): PilotResult {
+  const feCap = effectiveFe(squad);
+  const beCap = effectiveBe(squad);
+  const result = calcDelivery(project, feCap, beCap, horizonMonths);
+  return { ...result, teamSize: squad.members.length };
+}
+
+function runPilotSim(
+  project: Project,
+  numEngineers: number,
+  includePm: boolean,
+  multiplier: number,
+  horizonMonths: number,
+): PilotResult {
+  const feCap = numEngineers * multiplier;
+  const beCap = numEngineers * multiplier;
+  const teamSize = numEngineers + (includePm ? 1 : 0);
+  const result = calcDelivery(project, feCap, beCap, horizonMonths);
+  return { ...result, teamSize };
 }
 
 function SensitivityChart({
@@ -49,24 +65,21 @@ function SensitivityChart({
   includePm,
   traditionalMonths,
   horizonMonths,
-  objective,
 }: {
   project: Project;
   numEngineers: number;
   includePm: boolean;
   traditionalMonths: number;
   horizonMonths: number;
-  objective: Objective;
 }) {
   const data = useMemo(() => {
     const points: { multiplier: number; months: number; feasible: boolean }[] = [];
     for (let m = 1; m <= 5; m += 0.5) {
-      const squad = buildPilotSquad(numEngineers, includePm, m);
-      const result = runPilot(project, squad, horizonMonths, objective);
+      const result = runPilotSim(project, numEngineers, includePm, m, horizonMonths);
       points.push({ multiplier: m, months: result.feasible ? result.deliveryMonths : horizonMonths, feasible: result.feasible });
     }
     return points;
-  }, [project, numEngineers, includePm, horizonMonths, objective]);
+  }, [project, numEngineers, includePm, horizonMonths]);
 
   const maxMonths = Math.max(traditionalMonths, ...data.map((d) => d.months), 1);
 
@@ -124,12 +137,10 @@ export function PilotSimulator({
   projects,
   squads,
   horizonMonths,
-  objective,
 }: {
   projects: Project[];
   squads: Squad[];
   horizonMonths: number;
-  objective: Objective;
 }) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id ?? "");
   const [numEngineers, setNumEngineers] = useState(1);
@@ -141,18 +152,13 @@ export function PilotSimulator({
 
   const traditionalResult = useMemo(() => {
     if (!project || !assignedSquad) return null;
-    return runPilot(project, assignedSquad, horizonMonths, objective);
-  }, [project, assignedSquad, horizonMonths, objective]);
-
-  const pilotSquad = useMemo(
-    () => buildPilotSquad(numEngineers, includePm, multiplier),
-    [numEngineers, includePm, multiplier],
-  );
+    return runTraditional(project, assignedSquad, horizonMonths);
+  }, [project, assignedSquad, horizonMonths]);
 
   const pilotResult = useMemo(() => {
     if (!project) return null;
-    return runPilot(project, pilotSquad, horizonMonths, objective);
-  }, [project, pilotSquad, horizonMonths, objective]);
+    return runPilotSim(project, numEngineers, includePm, multiplier, horizonMonths);
+  }, [project, numEngineers, includePm, multiplier, horizonMonths]);
 
   if (projects.length === 0 || squads.length === 0) {
     return (
@@ -321,7 +327,7 @@ export function PilotSimulator({
                   {pilotMonths != null ? `${pilotMonths} mo` : "Won\u2019t fit"}
                 </div>
                 <p className="text-[0.65rem] text-violet-500 mt-1">
-                  {pilotSquad.members.length} people at {multiplier}x productivity
+                  {numEngineers + (includePm ? 1 : 0)} people at {multiplier}x productivity
                 </p>
               </div>
             </div>
@@ -346,7 +352,6 @@ export function PilotSimulator({
               includePm={includePm}
               traditionalMonths={tradMonths}
               horizonMonths={horizonMonths}
-              objective={objective}
             />
           )}
         </div>
