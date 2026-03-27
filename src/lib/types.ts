@@ -115,7 +115,27 @@ export type SimulationResult = {
   planReliability: number;
 };
 
-// --- Comparison ---
+// --- Scenarios ---
+
+export type Scenario = {
+  id: string;
+  name: string;
+  squads: Squad[];
+  projects: Project[];
+  objective: Objective;
+  horizonMonths: number;
+  uncertainty: UncertaintyParams;
+  cycleLengthWeeks: number;
+  cycleOverheadPct: number;
+  aiEffect: number;
+};
+
+export type ScenarioResult = {
+  plan: ScheduleResult;
+  simulation: SimulationResult | null;
+};
+
+// --- Comparison (legacy) ---
 
 export type ComparisonMetrics = {
   label: string;
